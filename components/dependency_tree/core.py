@@ -1,14 +1,16 @@
 import os
+import networkx as nx
+from networkx.classes.digraph import DiGraph
+from .graphic import GraphWidget
+from .threads import GNetworkLoader
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt
 from PyQt6.QtWidgets import QFileDialog, QLabel, QWidget, QVBoxLayout
-import networkx as nx
-from .graphic import GraphWidget
-from networkx.readwrite import json_graph
 
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.cocoa.*.warning=false"
 
+
 class DependencyTree(QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self._parent = parent
         self.setObjectName("dependencyTree")
@@ -19,42 +21,49 @@ class DependencyTree(QWidget):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.main_layout)
 
+        # for loading graph data in DiGraph
+        self.graph_loader = None
+        self.G = None
+
+        self.current_file = None
+
         self._file_path_selector_page()
 
     def _setup_stacked_widget(self):
         pass
 
     def _file_path_selector_page(self):
-
         # Push button for selecting location
         self.file_selector = QLabel()
         self.file_selector.setContentsMargins(0, 5, 0, 5)
         self.file_selector.setText("Select the main file")
-        self.file_selector.setObjectName('dependencyTreeFileSelection')
+        self.file_selector.setObjectName("dependencyTreeFileSelection")
         self.file_selector.setMaximumHeight(30)
         self.file_selector.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.spacer_item = QWidget()
         self.graph_widget = GraphWidget()
-        self.spacer_item.setMinimumHeight(self.geometry().height()//2)
+        self.graph_widget.setMaximumHeight(0)
+        self.graph_widget.setVisible(False)
+        self.spacer_item.setMinimumHeight(self.geometry().height() // 2)
         self.main_layout.addWidget(self.spacer_item, 0, Qt.AlignmentFlag.AlignTop)
         self.main_layout.addWidget(self.file_selector)
 
         # if the selected is clicked store the location selector button in class as object
-        self.file_selector.mousePressEvent = self._on_file_selected # type: ignore
+        self.file_selector.mousePressEvent = self._on_file_selected  # type: ignore
 
-
-    def _animate(self,
+    def _animate(
+        self,
         object_to_be_animated,
         property_to_be_animated: bytes,
         final_dimension: int,
         initial_dimension: int,
         visibility: bool,
         name: str,
-        animation_type = QEasingCurve.Type.InQuad,
+        animation_type=QEasingCurve.Type.InQuad,
         duration: int = 500,
         before: bool = False,
-        continuous: bool = False
+        continuous: bool = False,
     ):
         """
         Creates and starts a QPropertyAnimation for a given object property.
@@ -70,7 +79,7 @@ class DependencyTree(QWidget):
             duration: The duration of the animation in milliseconds.
             before: To commit visibility before or after
         """
-        if before: # this is for when appearing
+        if before:  # this is for when appearing
             object_to_be_animated.setVisible(visibility)
         animation = QPropertyAnimation(object_to_be_animated, property_to_be_animated)
         setattr(self, name, animation)
@@ -82,27 +91,37 @@ class DependencyTree(QWidget):
         else:
             animation.setLoopCount(1)
         animation.setEasingCurve(animation_type)
-        animation.finished.connect(lambda: (
-            object_to_be_animated.setVisible(visibility), delattr(self, name)
-        ))
+        animation.finished.connect(
+            lambda: (object_to_be_animated.setVisible(visibility), delattr(self, name))
+        )
         animation.start()
 
     def _on_file_selected(self, event):
+        # only let the user select python file, there can be one more way by project toml or something similar structure
         file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Select a Python file",
-            "",
-            "Python Files (*.py);;All Files (*)"
+            None, "Select a Python file", "", "Python Files (*.py);;All Files (*)"
         )
         if file_path:
+            self.current_file = file_path
             self.file_selector.setText(file_path)
-            self._animate(object_to_be_animated=self.spacer_item,
-                property_to_be_animated= b'minimumHeight', final_dimension=0,
+            self._animate(
+                object_to_be_animated=self.spacer_item,
+                property_to_be_animated=b"minimumHeight",
+                final_dimension=0,
                 initial_dimension=self.spacer_item.minimumHeight(),
-                visibility=False,name='spacer_animation')
+                visibility=False,
+                name="spacer_animation",
+            )
+
+            self.graph_loader = GNetworkLoader(file_path)
+            self.graph_loader.graph_data.connect(self._get_graph_data)
 
             # Just templating here (the tree drawer in utils will be called here)
 
+    def _get_graph_data(self, G: DiGraph):
+        """Now start the construction of GraphicItems when we reiceve graph data"""
+
+        pass
 
     def _directory_file_check(self):
         """This is for checking if the file is a valid python file and is in project folder"""
