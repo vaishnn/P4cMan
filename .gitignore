@@ -110,6 +110,6 @@ website/
 # Json files
 inspect.json
 
-bin*
+bin/
 dist*
 setup*

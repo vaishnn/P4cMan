@@ -41,11 +41,8 @@ class OnboardingPage(QWidget):
         self.setObjectName("onboardingWidget")
         self.config = config
         self.setStyleSheet(config.get('stylesheet', {}).get('main',''))
-        self.project_location = ""
-        self.animation_running = False
-        self.python_interpreters = None
-        self.found_python_interpreters = {}
-        self.current_env = []
+
+        self._variables_setup()
 
         self.worker = LibraryThreads()
         self.worker.virtual_envs.connect(self._display_env)
@@ -67,6 +64,17 @@ class OnboardingPage(QWidget):
         self.frame_layout.addWidget(self.stacked_widget)
 
         self._setup_pages()
+
+    def _variables_setup(self):
+        """For setting up variables of the class"""
+        self.project_location = ""
+
+        # variables for setting up animations
+        self.venv_start_up_animation = False
+
+        self.python_interpreters = None
+        self.found_python_interpreters = {}
+        self.current_env = []
 
     def _setup_pages(self):
         """
@@ -228,10 +236,10 @@ class OnboardingPage(QWidget):
         Opens a file dialog, updates the UI with the selected directory,
         and initiates animations and data fetching for virtual environments.
         """
-        if self.animation_running:
+        if self.venv_start_up_animation:
             return
 
-        directory = QFileDialog.getExistingDirectory(self, "Selecting Directory")
+        directory = QFileDialog.getExistingDirectory(self, "Selecting Directory", directory=os.path.expanduser("~"))
         if directory:
 
             self.worker.emit_signal_for_virtual_envs(
@@ -254,22 +262,22 @@ class OnboardingPage(QWidget):
 
             self.find_env_in_pc.emit()
 
-            self.animation_running = True
+            self.venv_start_up_animation = True
             self.select_env.setVisible(True)
 
             final_height = self.select_env.sizeHint().height()
 
-            self.animation = QPropertyAnimation(
+            self.animation_virtual_env_selection = QPropertyAnimation(
                 self.select_env, b"maximumHeight"
             )
-            self.animation.setDuration(1000)
-            self.animation.setStartValue(0)
-            self.animation.setEndValue(final_height)
-            self.animation.setEasingCurve(QEasingCurve.Type.InOutQuart)
-            self.animation.finished.connect(
-                lambda: setattr(self, 'animation_running', False)
+            self.animation_virtual_env_selection.setDuration(1000)
+            self.animation_virtual_env_selection.setStartValue(0)
+            self.animation_virtual_env_selection.setEndValue(final_height)
+            self.animation_virtual_env_selection.setEasingCurve(QEasingCurve.Type.InOutQuart)
+            self.animation_virtual_env_selection.finished.connect(
+                lambda: setattr(self, 'venv_start_up_animation', False)
             )
-            self.animation.start()
+            self.animation_virtual_env_selection.start()
 
     def _display_env(self, env: list):
         self.env = env

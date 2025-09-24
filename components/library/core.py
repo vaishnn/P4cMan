@@ -1,9 +1,10 @@
 import os
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import (QComboBox, QFileDialog, QLineEdit, QMessageBox,
-                             QStackedWidget, QWidget, QVBoxLayout, QListWidget,
-                             QHBoxLayout, QLabel, QListWidgetItem, QPushButton,
-                             QSizePolicy)
+from PyQt6.QtWidgets import (
+    QComboBox, QFileDialog, QLineEdit, QMessageBox,
+    QStackedWidget, QWidget, QVBoxLayout, QListWidget,
+    QHBoxLayout, QLabel, QListWidgetItem, QPushButton,
+    QSizePolicy)
 from PyQt6.QtCore import (QEasingCurve, QPropertyAnimation, QTimer, Qt,
                         pyqtSignal, QSize, pyqtSlot)
 from ..widgets.helper_classes import LineEdit
@@ -47,6 +48,10 @@ class Library(QWidget):
         """Initializes non-UI properties, caches, and maps."""
         self.item_map = {}
         self.animate_env_box = False
+        self.search_bar_hiding_animations = False
+        self.search_bar_showing_animations = False
+        self.create_virtual_env_animation_hiding = False
+        self.create_virtual_env_animation_showing = False
         self.current_loaded_virtual_envs_list = []
         self.current_virtual_env = ""
         self.python_exec_path = ""
@@ -82,6 +87,49 @@ class Library(QWidget):
 
         page_layout.addLayout(library_section_layout)
 
+    def _animate(self,
+        object_to_be_animated,
+        property_to_be_animated: bytes,
+        final_dimension: int,
+        initial_dimension: int,
+        visibility: bool,
+        name: str,
+        animation_type = QEasingCurve.Type.InQuad,
+        duration: int = 500,
+        before: bool = False,
+        continuous: bool = False
+    ):
+        """
+        Creates and starts a QPropertyAnimation for a given object property.
+
+        Args:
+            object_to_be_animated: The Object to animate.
+            property_to_be_animated: The byte-string name of the property to animate (e.g., b'maximumHeight').
+            final_dimension: The final value of the animated property.
+            initial_dimension: The starting value of the animated property.
+            visibility: If True, the object is visible after the animation; otherwise, it's hidden.
+            name: An attribute name to store the QPropertyAnimation instance (e.g., "hide_search_bar").
+            animation_type: The easing curve to use for the animation.
+            duration: The duration of the animation in milliseconds.
+            before: To commit visibility before or after
+        """
+        if before: # this is for when appearing
+            object_to_be_animated.setVisible(visibility)
+        animation = QPropertyAnimation(object_to_be_animated, property_to_be_animated)
+        setattr(self, name, animation)
+        animation.setDuration(duration)
+        animation.setStartValue(initial_dimension)
+        animation.setEndValue(final_dimension)
+        if continuous:
+            animation.setLoopCount(-1)
+        else:
+            animation.setLoopCount(1)
+        animation.setEasingCurve(animation_type)
+        animation.finished.connect(lambda: (
+            object_to_be_animated.setVisible(visibility), delattr(self, name)
+        ))
+        animation.start()
+
     def _setup_path_selection_bar(self, parent_layout):
         """Creates the top bar for selecting the virtual environment path."""
         layout = QHBoxLayout()
@@ -97,37 +145,41 @@ class Library(QWidget):
 
         # for changing the virtual env in the same directory
         self.change_env_in_same_directory = QComboBox()
-        self.change_env_in_same_directory.setFixedHeight(30)
-        self.change_env_in_same_directory.setFixedWidth(0)
+        self.change_env_in_same_directory.setMaximumHeight(30)
+        self.change_env_in_same_directory.setMaximumWidth(0)
         self.change_env_in_same_directory.setVisible(False)
         self.change_env_in_same_directory.currentIndexChanged.connect(self._on_env_inventory_in_same_directory)
         self.change_env_in_same_directory.setObjectName("change_env_in_same_directory")
 
-        self.inititalize_environment_button = RotatingPushButton()
-        self.inititalize_environment_button.setIcon(
+        self.initialize_env_button = RotatingPushButton()
+        self.initialize_env_button.setIcon(
             QIcon(resource_path(self.config.get('paths', {}).get('assets', {}).get('images', {}).get('add', "assets/images/add.svg")))
         )
-        # self.inititalize_environment_button.setIconSize(QSize(12, 12))
-        self.inititalize_environment_button.setFixedSize(15, 30)
-        self.inititalize_environment_button.setContentsMargins(0, 0, 0, 0)
-        self.inititalize_environment_button.setObjectName("initializeEnvironmentButton")
-        self.inititalize_environment_button.clicked.connect(self._create_new_virtual_env)
+        # self.initialize_env_button.setIconSize(QSize(12, 12))
+        self.initialize_env_button.setMaximumSize(15, 15)
+        self.initialize_env_button.setContentsMargins(0, 0, 0, 0)
+        self.initialize_env_button.setObjectName("initializeEnvironmentButton")
+        self.initialize_env_button.clicked.connect(self._create_new_virtual_env)
 
         layout.addWidget(self.label_location, 1)
         layout.addWidget(self.change_env_in_same_directory, 2)
-        layout.addWidget(self.inititalize_environment_button)
+        layout.addWidget(self.initialize_env_button)
         parent_layout.addLayout(layout)
 
     def _create_new_virtual_env(self):
-        if self.index_for_stacked_pages != {}:
-            self.stacked_library_with_loading_screen.setCurrentIndex(
-                self.index_for_stacked_pages['create_new_env']
-            )
+        """Prepares the UI to allow the user to create a new virtual environment."""
+        self.stacked_library_with_loading_screen.setCurrentWidget(
+            self.create_new_env
+        )
+        self._animate(self.search_bar, b'maximumHeight', 0, 30, False, "hide_search_bar")
+        self._animate(self.change_env_in_same_directory, b'maximumWidth', 0, 150, False, "hide_env_box")
+        self._animate(self.initialize_env_button, b'maximumWidth', 0, 15, False,
+            "hide_initialize_button", QEasingCurve.Type.InQuad)
 
     def _on_env_inventory_in_same_directory(self):
         """Handles the selection of a different virtual environment from the QComboBox."""
-        self.stacked_library_with_loading_screen.setCurrentIndex(
-            self.index_for_stacked_pages['loading_page']
+        self.stacked_library_with_loading_screen.setCurrentWidget(
+            self.loading_page
         )
         current_location = self.current_dir
         current_virtual_env = self.change_env_in_same_directory.currentText()
@@ -141,7 +193,7 @@ class Library(QWidget):
         self.animate_env_box = True
         self.change_env_in_same_directory.setVisible(True)
         # final_width = self.change_env_in_same_directory.sizeHint().height()
-        final_width = 200
+        final_width = 150
         self.animation = QPropertyAnimation(
             self.change_env_in_same_directory, b'maximumWidth'
         )
@@ -155,11 +207,12 @@ class Library(QWidget):
         self.animation.start()
 
     def _page_for_creating_new_virtual_env(self):
+        """Creates and returns a QWidget that provides the UI for creating a new virtual environment."""
         container = QWidget()
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         name_of_venv = LineEdit()
-        name_of_venv.setFixedHeight(38)
+        name_of_venv.setMaximumHeight(40)
         name_of_venv.setContentsMargins(0, 0, 0, 0)
         name_of_venv.setPlaceholderText("Type name of your virtual environment, default: venv")
         name_of_venv.setObjectName("customVirtualName")
@@ -174,21 +227,20 @@ class Library(QWidget):
         second_layout = QHBoxLayout()
         cancel_button = QPushButton("Cancel")
         cancel_button.setObjectName("cancelEnvironmentCreatorButton")
-        cancel_button.clicked.connect(lambda: self.stacked_library_with_loading_screen.setCurrentIndex(
-            self.index_for_stacked_pages['library_list']
-        ))
+        cancel_button.clicked.connect(lambda: (self.stacked_library_with_loading_screen.setCurrentWidget(
+            self.library_list), self._check_for_hidden())
+        )
 
 
         second_layout.addSpacing(10)
         second_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
-        second_layout.addWidget(cancel_button)
 
+        second_layout.addWidget(cancel_button)
         layout.addWidget(name_of_venv)
         layout.addWidget(self.drop_down_for_creating_python_env)
         layout.addWidget(create_virtual_env_button)
         layout.addLayout(second_layout)
-
-
+        layout.addSpacing(20)
 
         container.setLayout(layout)
         return container
@@ -202,7 +254,7 @@ class Library(QWidget):
         if text in venv_names:
             commit_action(self, "Same name environment already exist")
         else:
-            self.stacked_library_with_loading_screen.setCurrentIndex(self.index_for_stacked_pages['loading_page'])
+            self.stacked_library_with_loading_screen.setCurrentWidget(self.loading_page)
             self.env_creator = LibraryThreads()
             self.env_creator.emit_create_virtual_env(
                 self.current_dir,
@@ -216,7 +268,7 @@ class Library(QWidget):
         if success_code == 1:
             self.selection_location_from_main(directory, virtual_env_name, venvs)
         elif success_code == 0:
-            self.stacked_library_with_loading_screen.setCurrentIndex(self.index_for_stacked_pages['loading_page'])
+            self.stacked_library_with_loading_screen.setCurrentWidget(self.loading_page)
         else:
             commit_action(self, "Unknown error")
 
@@ -238,8 +290,9 @@ class Library(QWidget):
         """Creates the search bar and its associated typing timer."""
         self.search_bar = QLineEdit()
         self.search_bar.hide()
+        self.search_bar.setContentsMargins(0, 0, 0, 0)
         self.search_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.search_bar.setFixedHeight(30)
+        self.search_bar.setMaximumHeight(30)
         self.search_bar.setPlaceholderText("Search for libraries")
         self.search_bar.setObjectName("searchBarInLibraryListWidget")
         self.search_bar.textChanged.connect(self._sort_items_list)
@@ -259,10 +312,6 @@ class Library(QWidget):
         self.create_new_env = self._page_for_creating_new_virtual_env()
         self.stacked_library_with_loading_screen.addWidget(self.create_new_env)
 
-        self.index_for_stacked_pages['library_list'] = 0
-        self.index_for_stacked_pages['loading_page'] = 1
-        self.index_for_stacked_pages['page_no_env'] = 2
-        self.index_for_stacked_pages['create_new_env'] = 3
 
 
 
@@ -305,8 +354,18 @@ class Library(QWidget):
     def _handle_list_libraries(self, libraries: list):
         self._add_items(libraries)
 
+    def _check_for_hidden(self):
+        if not self.search_bar.isVisible():
+            self._animate(self.search_bar, b'maximumHeight', 30, 0, True, "show_search_bar", before=True)
+        if not self.initialize_env_button.isVisible():
+            self._animate(self.initialize_env_button, b'maximumWidth', 15, 0, True, "show_initialize_environment_button", before=True)
+        if not self.change_env_in_same_directory.isVisible():
+            self._animate(self.change_env_in_same_directory, b'maximumWidth', 150, 0, True, "show_change_environment_button", before=True)
+
+
     def _on_venv_loaded(self, directory_path, current_venv, virtual_env_names):
         # Block signals to prevent the signal loop
+        self._check_for_hidden()
         self.change_env_in_same_directory.clear()
         self.change_env_in_same_directory.blockSignals(True)
 
@@ -320,8 +379,8 @@ class Library(QWidget):
                     if current_venv == env['venv_name']:
                         current_venv = self.change_env_in_same_directory.currentText()
 
-            self.stacked_library_with_loading_screen.setCurrentIndex(
-                self.index_for_stacked_pages['loading_page']
+            self.stacked_library_with_loading_screen.setCurrentWidget(
+                self.loading_page
             )
             self.current_loaded_virtual_envs_list = virtual_env_names
             self._expand_change_env() # Animate the box
@@ -340,7 +399,8 @@ class Library(QWidget):
 
     def _select_location(self, event):
         directory_path = QFileDialog.getExistingDirectory(
-            self, "Select Directory")
+            self, "Select Directory", directory=os.path.expanduser("~")
+        )
         if directory_path:
             self.current_dir = directory_path
             self.already_inside_project = False
@@ -351,24 +411,31 @@ class Library(QWidget):
             )
 
     def _venv_loaded_connected(self, venv_list):
+        """Handles the list of virtual environments received from the worker thread."""
         if isinstance(venv_list, list):
             if venv_list == []:
                 self.change_env_in_same_directory.clear()
                 self.current_loaded_virtual_envs_list = []
                 self.current_virtual_env = None
                 self.change_env_in_same_directory.setPlaceholderText("--")
-                self.stacked_library_with_loading_screen.setCurrentIndex(
-                    self.index_for_stacked_pages['page_no_env']
+                self.stacked_library_with_loading_screen.setCurrentWidget(
+                    self.page_no_env
                 )
+                self._animate(self.search_bar, b'maximumHeight', 0, 30, False, "hide_search_bar")
+                self._animate(self.change_env_in_same_directory, b'maximumWidth', 0, 150, False, "hide_env_box")
+                if not self.initialize_env_button.isVisible():
+                    self._animate(self.initialize_env_button, b'maximumWidth', 15, 0, True, "show_initialize_environment_button", before=True)
+
                 return
             self.current_virtual_env = venv_list[0].get('venv_name')
             self.venv_loaded.emit( self.current_dir, venv_list[0].get('venv_name'), venv_list)
 
     def selection_location_from_main(self, directoryPath, venv_name, virtual_envs):
-
+        """
+        Updates the library view and internal state based on a selected project folder and virtual environment.
+        """
         if hasattr(self, 'env_creator'):
             self.env_creator.quit()
-
 
         self.current_dir = directoryPath
         self.label_location.setText(f"{directoryPath}")
@@ -377,6 +444,9 @@ class Library(QWidget):
 
 
     def _add_items(self, itemsList):
+        """
+        Populates the library list with provided items and triggers a UI refresh.
+        """
         self.search_bar.show()
         self.all_items_data = [items['metadata'] for items in itemsList]
         self.libraries_emitter.emit(self.all_items_data)
@@ -480,11 +550,15 @@ class Library(QWidget):
             uninstall_button.clicked.connect(
                 lambda checked=False, packageName=item['name'], uninstall_button=uninstall_button: self.start_library_uninstaller(packageName, uninstall_button))
 
-        self.stacked_library_with_loading_screen.setCurrentIndex(
-            self.index_for_stacked_pages['library_list']
+        self.stacked_library_with_loading_screen.setCurrentWidget(
+            self.library_list
         )
 
     def start_library_uninstaller(self, packageName, uninstall_button: QPushButton):
+        """
+        Initiates the uninstallation process for a specified library.
+        Displays a confirmation dialog and starts a separate thread for the uninstall operation.
+        """
         reply = QMessageBox.warning(
             self,
             'Confirm Uninstall',
@@ -507,7 +581,19 @@ class Library(QWidget):
 
     @pyqtSlot(int, str, str, QPushButton)
     def on_uninstall_finished(self, success, package_name, python_path, uninstall_button: QPushButton):
+        """
+        Handles the completion of an uninstall process.
 
+        Updates the UI to reflect the success or failure of the uninstall operation,
+        including changing the icon of the uninstall button and, upon success,
+        removing the item from the list after a short delay.
+
+        Args:
+            success (int): 1 if the uninstall was successful, 0 otherwise.
+            package_name (str): The name of the package that was attempted to be uninstalled.
+            python_path (str): The path to the Python executable used for the uninstall.
+            uninstall_button (QPushButton): The button associated with the uninstalled package.
+        """
         def _pop_item_in_sometime(self):
             listItem = self.item_map.pop(package_name)
             if listItem:

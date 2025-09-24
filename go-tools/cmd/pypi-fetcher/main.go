@@ -204,5 +204,4 @@ func main() {
 	encoder.SetIndent("", " ")
 	encoder.Encode(current_packages)
 	save_data(file_dir)
-
 }

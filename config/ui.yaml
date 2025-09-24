@@ -137,7 +137,7 @@ stylesheet:
       color: {{ ui.colors.text.bright }};
       font-weight: bold;
     }
-    #labelLocation {
+    #labelLocation, #dependencyTreeFileSelection {
       background-color: {{ ui.colors.border.dark }};
       color: {{ ui.colors.text.muted }};
       border: 1px solid {{ ui.colors.border.light }};
@@ -260,7 +260,7 @@ stylesheet:
       height: 20px;
       margin-right: 5px;
     }
-    #change_env_in_same_directory {
+    #change_env_in_same_directory, #initializeEnvironmentButton {
       background-color: {{ ui.colors.border.dark }};
       color: {{ ui.colors.text.normal }};
       border: 1px solid {{ ui.colors.border.light }};
@@ -269,22 +269,18 @@ stylesheet:
       padding-right: {{ ui.dimensions.padding.large }};
       font-size: {{ ui.dimensions.fontSize.default }};
     }
+
     #change_env_in_same_directory:hover { background-color: {{ ui.colors.background.hover }}; }
-    #initializeEnvironmentButton {
+    #cancelEnvironmentCreatorButton {
       background-color: transparent ;
       color: {{ ui.colors.text.normal }};
       border: 0px solid {{ ui.colors.border.light }};
       border-radius: {{ ui.dimensions.borderRadius.medium }};
-      padding-left: {{ ui.dimensions.padding.large }};
-      padding-right: {{ ui.dimensions.padding.large }};
-      font-size: {{ ui.dimensions.fontSize.default }};
+      padding: {{ ui.dimensions.padding.medium }};
     }
-
-    #initializeEnvironmentButton:hover {
-      transition: background-color 0.3s ease;
-      transform: rotate(30deg);
+    #cancelEnvironmentCreatorButton:hover {
+      background-color: {{ ui.colors.background.hover }};
     }
-
   initScreen: |
     #container {
       background-color: {{ ui.colors.background.main }};

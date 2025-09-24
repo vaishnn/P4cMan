@@ -1,0 +1,27 @@
+digraph G {
+  rankdir="LR";
+  node [shape=box, style=rounded, color="#0066CC"];
+  node [shape=ellipse, color="#666666"];
+
+  "P4cMan.main" -> "P4cMan.helpers.state_manager";
+  "P4cMan.main" -> "P4cMan.main_window";
+  "P4cMan.main" -> "P4cMan.config.loader";
+  "P4cMan.main" -> "P4cMan.helpers.utils";
+  "P4cMan.main_window" -> "P4cMan.components.analysis.core";
+  "P4cMan.main_window" -> "P4cMan.components.settings.core";
+  "P4cMan.main_window" -> "P4cMan.components.onboarding.view";
+  "P4cMan.main_window" -> "P4cMan.components.installer.core";
+  "P4cMan.main_window" -> "P4cMan.components.dependency_tree.core";
+  "P4cMan.main_window" -> "P4cMan.components.about.core";
+  "P4cMan.main_window" -> "P4cMan.components.library.core";
+  "P4cMan.main_window" -> "P4cMan.helpers.state_manager";
+  "P4cMan.main_window" -> "P4cMan.components.installer.utils";
+  "P4cMan.main_window" -> "P4cMan.components.widgets.control_bar";
+  "P4cMan.main_window" -> "P4cMan.components.onboarding.threads";
+  "P4cMan.config.loader" -> "P4cMan.helpers.utils";
+  "P4cMan.components.onboarding.view" -> "P4cMan.helpers.utils";
+  "P4cMan.components.library.core" -> "P4cMan.helpers.utils";
+  "P4cMan.components.widgets.control_bar" -> "P4cMan.helpers.utils";
+  "P4cMan.components.installer.core" -> "P4cMan.helpers.utils";
+  "P4cMan.components.installer.utils" -> "P4cMan.helpers.utils";
+}

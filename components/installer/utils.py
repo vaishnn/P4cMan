@@ -123,7 +123,6 @@ def format_pypi_tooltip_html(pypi_data, font_family_name):
     </div>
     """
 
-
 def save_file(data: list, app_name: str = "P4cMan", file_name: str = "library_list.txt"):
     """Saves data to a file in the application's support directory."""
     # Saves Data in a pre-defined directory

@@ -66,24 +66,29 @@ class P4cMan(QMainWindow):
         """
         Initializes the onboarding steps for the application.
         """
-        self.onboarding_widget = OnboardingPage(self.config, self)
 
         self.main_stack = QStackedWidget(self)
-        self.main_stack.addWidget(self.onboarding_widget)
-        self.main_stack.addWidget(self.container)
-        self.main_stack.addWidget(self.saving_page)
 
         self.setCentralWidget(self.main_stack)
         if self.state_variables.get('project_folder', "") == "":
+
+            self.onboarding_widget = OnboardingPage(self.config, self)
             self.main_stack.setCurrentWidget(self.onboarding_widget)
+            self.main_stack.addWidget(self.onboarding_widget)
+            self.main_stack.addWidget(self.container)
+
+
         else:
+            self.main_stack.addWidget(self.container)
             self.main_stack.setCurrentWidget(self.container)
+
             self._set_existing_python_env(
                 self.state_variables.get('project_folder', ''),
                 self.state_variables.get('virtual_env_name', ''),
                 self.state_variables.get('loaded_virtual_envs', [])
                 )
 
+        self.main_stack.addWidget(self.saving_page)
 
     def _on_fully_loaded(self):
         pass
@@ -92,9 +97,12 @@ class P4cMan(QMainWindow):
         """
         Just for setting connection, function for simplicity and devil worship
         """
-        self.onboarding_widget.location_selected.connect(self._set_existing_python_env)
-        self.onboarding_widget.switch_to_main.connect(self.switch_content)
-        self.onboarding_widget.release_python_interpreters.connect(self._set_python_interpreters)
+
+        if hasattr(self, 'onboarding_widget'):
+            self.onboarding_widget.location_selected.connect(self._set_existing_python_env)
+            self.onboarding_widget.switch_to_main.connect(self.switch_content)
+            self.onboarding_widget.release_python_interpreters.connect(self._set_python_interpreters)
+
         self.libraries.current_state.connect(self._set_state_variables)
         self.libraries.libraries_emitter.connect(self._retrieve_libraries_content)
         self.libraries.python_exec.connect(self.installer.set_python_exec)
@@ -142,16 +150,16 @@ class P4cMan(QMainWindow):
         """
         self.libraries = Library(config = self.config)
         self.installer = Installer(config = self.config)
-        self.analysis = Analysis()
         self.dependency_tree = DependencyTree()
+        self.analysis = Analysis()
         self.settings = Setting()
         self.about = About()
 
         self.contentDict = {
             "Libraries": self.libraries,
             "Installer": self.installer,
-            "Analysis": self.analysis,
             "Dependency Tree": self.dependency_tree,
+            "Analysis": self.analysis,
             "Settings": self.settings,
             "About": self.about
         }
@@ -201,8 +209,10 @@ class P4cMan(QMainWindow):
         """
         Switches the content of the application.
         """
-        self.onboarding_widget.worker.thread_library.deleteLater()
-        self.main_stack.setCurrentWidget(self.container)
+        if hasattr(self, 'onboarding_widget'):
+            self.onboarding_widget.worker.thread_library.deleteLater()
+        if self.main_stack.currentWidget() != self.container:
+            self.main_stack.setCurrentWidget(self.container)
 
     def _setting_ui_properties(self):
         """
@@ -304,7 +314,7 @@ class P4cMan(QMainWindow):
         Args:
             a0 (QCloseEvent): The close event.
         """
-        self.main_stack.setCurrentIndex(3)
+        self.main_stack.setCurrentWidget(self.saving_page)
         if not self.state_variables.get('project_folder', "") == "":
             save_state(
                 self.state_variables

@@ -4,6 +4,7 @@ from .utils import get_app_support_directory
 
 
 def load_state(file_name = "state.json"):
+    '''Load state from file'''
     directory = get_app_support_directory()
     file_path = os.path.join(directory, file_name)
     data = {}
@@ -15,6 +16,7 @@ def load_state(file_name = "state.json"):
     return data
 
 def save_state(data, file_name = "state.json"):
+    '''Save state to file'''
     directory = get_app_support_directory()
     file_path = os.path.join(directory, file_name)
     try:

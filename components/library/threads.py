@@ -59,7 +59,10 @@ class LibraryWorker(QObject):
 
         try:
             details = json.loads(result_details.stdout).get('installed', [])
-            self.details.emit(details)
+            if details is None:
+                self.details.emit([])
+            else:
+                self.details.emit(details)
         except json.JSONDecodeError:
             self.details.emit([])
             return

@@ -148,7 +148,7 @@ func checkExecutable(path string) bool {
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	slog.SetDefault(logger)
-	max_depth := 2
+	max_depth := 1
 	number_worker := 4
 
 	var EnvSpecifics EnvironmentSpecifics

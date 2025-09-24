@@ -69,7 +69,6 @@ def format_project_urls(urls):
             links.append(f'<a href="{url_str}" style="color: #8ab4f8;">{url_str}</a>')
     return "<br>".join(links)
 
-
 def format_tooltip_html(item, font_family_name):
     """
     Takes a dictionary of package metadata and formats it into a styled HTML string.

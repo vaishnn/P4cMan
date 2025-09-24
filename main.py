@@ -3,11 +3,12 @@ import sys
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import QApplication, QSplashScreen
 from PyQt6.QtCore import Qt
-
 from main_window import P4cMan
 from config.loader import load_config, load_font
 from helpers.state_manager import load_state
 from helpers.utils import resource_path
+
+os.environ["QT_LOGGING_RULES"] = "qt.qpa.cocoa.*.warning=false"
 
 UI_FILE_PATH=resource_path("config/ui.yaml")
 CONTROLS_FILE_PATH=resource_path("config/paths.yaml")
