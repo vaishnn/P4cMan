@@ -24,6 +24,7 @@ class DependencyTree(QWidget):
         # for loading graph data in DiGraph
         self.graph_loader = None
         self.G = None
+        self.graph_layout = None
 
         self.current_file = None
 
@@ -48,6 +49,7 @@ class DependencyTree(QWidget):
         self.spacer_item.setMinimumHeight(self.geometry().height() // 2)
         self.main_layout.addWidget(self.spacer_item, 0, Qt.AlignmentFlag.AlignTop)
         self.main_layout.addWidget(self.file_selector)
+        self.main_layout.addWidget(self.graph_widget)
 
         # if the selected is clicked store the location selector button in class as object
         self.file_selector.mousePressEvent = self._on_file_selected  # type: ignore
@@ -102,6 +104,8 @@ class DependencyTree(QWidget):
             None, "Select a Python file", "", "Python Files (*.py);;All Files (*)"
         )
         if file_path:
+            # Implement a logic: when the comman
+            # path of project dir and file is not project directory display a toast message
             self.current_file = file_path
             self.file_selector.setText(file_path)
             self._animate(
@@ -115,13 +119,29 @@ class DependencyTree(QWidget):
 
             self.graph_loader = GNetworkLoader(file_path)
             self.graph_loader.graph_data.connect(self._get_graph_data)
-
+            self.graph_loader.start()
             # Just templating here (the tree drawer in utils will be called here)
 
-    def _get_graph_data(self, G: DiGraph):
+    def _get_graph_data(self, G: DiGraph, layout: dict):
         """Now start the construction of GraphicItems when we reiceve graph data"""
 
-        pass
+        self.graph_loader = None
+        self.graph = G
+        self.graph_layout = layout
+
+        # Animating the graph layout
+        self._animate(
+            object_to_be_animated=self.graph_widget,
+            property_to_be_animated=b"maximumHeight",
+            final_dimension=400,
+            initial_dimension=0,
+            visibility=True,
+            name="graph_widget_animation",
+            before=True,
+        )
+        self.graph_widget.set_graph_and_position(layout, G)
+        self.graph_widget.setVisible(True)
+        print(self.graph_widget.sizeHint().width())
 
     def _directory_file_check(self):
         """This is for checking if the file is a valid python file and is in project folder"""

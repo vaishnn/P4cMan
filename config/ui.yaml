@@ -281,6 +281,10 @@ stylesheet:
     #cancelEnvironmentCreatorButton:hover {
       background-color: {{ ui.colors.background.hover }};
     }
+
+    #GraphWidget {
+      background-color: transparent ;
+    }
   initScreen: |
     #container {
       background-color: {{ ui.colors.background.main }};

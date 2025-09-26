@@ -113,3 +113,6 @@ inspect.json
 bin/
 dist*
 setup*
+
+# Some other things which i am lazy to classify properly
+testing_ground*

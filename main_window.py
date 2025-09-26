@@ -1,19 +1,27 @@
 from PyQt6.QtWidgets import (
-    QFrame, QListWidget, QMainWindow, QHBoxLayout, QPushButton,
-    QVBoxLayout, QWidget, QLabel, QStackedWidget,
+    QFrame,
+    QListWidget,
+    QMainWindow,
+    QHBoxLayout,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+    QLabel,
+    QStackedWidget,
 )
-from PyQt6.QtCore import  Qt, pyqtSignal
-from components.onboarding.view import OnboardingPage
-from components.dependency_tree.core import DependencyTree
-from components.library.core import Library
-from components.widgets.control_bar import ControlBar
+from PyQt6.QtCore import Qt, pyqtSignal
 from components.about.core import About
-from components.installer.core import Installer
-from components.installer.utils import save_file
-from components.analysis.core import Analysis
+from components.library.core import Library
 from components.settings.core import Setting
 from helpers.state_manager import save_state
+from components.analysis.core import Analysis
+from components.installer.core import Installer
+from components.installer.utils import save_file
+from components.widgets.control_bar import ControlBar
+from components.onboarding.view import OnboardingPage
+from components.dependency_tree.core import DependencyTree
 from components.onboarding.threads import PythonInterpreters
+
 
 class P4cMan(QMainWindow):
     """
@@ -24,11 +32,8 @@ class P4cMan(QMainWindow):
     loaded_all_components = pyqtSignal()
     load_libraries = pyqtSignal()
     ui_loaded = pyqtSignal()
-    def __init__(
-        self,
-        state_variables,
-        config: dict = {}
-    ):
+
+    def __init__(self, state_variables, config: dict = {}):
         """
         Initializes the P4cMan application window.
 
@@ -70,23 +75,21 @@ class P4cMan(QMainWindow):
         self.main_stack = QStackedWidget(self)
 
         self.setCentralWidget(self.main_stack)
-        if self.state_variables.get('project_folder', "") == "":
-
+        if self.state_variables.get("project_folder", "") == "":
             self.onboarding_widget = OnboardingPage(self.config, self)
             self.main_stack.setCurrentWidget(self.onboarding_widget)
             self.main_stack.addWidget(self.onboarding_widget)
             self.main_stack.addWidget(self.container)
-
 
         else:
             self.main_stack.addWidget(self.container)
             self.main_stack.setCurrentWidget(self.container)
 
             self._set_existing_python_env(
-                self.state_variables.get('project_folder', ''),
-                self.state_variables.get('virtual_env_name', ''),
-                self.state_variables.get('loaded_virtual_envs', [])
-                )
+                self.state_variables.get("project_folder", ""),
+                self.state_variables.get("virtual_env_name", ""),
+                self.state_variables.get("loaded_virtual_envs", []),
+            )
 
         self.main_stack.addWidget(self.saving_page)
 
@@ -98,10 +101,14 @@ class P4cMan(QMainWindow):
         Just for setting connection, function for simplicity and devil worship
         """
 
-        if hasattr(self, 'onboarding_widget'):
-            self.onboarding_widget.location_selected.connect(self._set_existing_python_env)
+        if hasattr(self, "onboarding_widget"):
+            self.onboarding_widget.location_selected.connect(
+                self._set_existing_python_env
+            )
             self.onboarding_widget.switch_to_main.connect(self.switch_content)
-            self.onboarding_widget.release_python_interpreters.connect(self._set_python_interpreters)
+            self.onboarding_widget.release_python_interpreters.connect(
+                self._set_python_interpreters
+            )
 
         self.libraries.current_state.connect(self._set_state_variables)
         self.libraries.libraries_emitter.connect(self._retrieve_libraries_content)
@@ -122,9 +129,9 @@ class P4cMan(QMainWindow):
             project_folder (str): The path to the project folder.
             virtual_env_name (str): The name of the virtual environment.
         """
-        self.state_variables['project_folder'] = project_folder
-        self.state_variables['virtual_env_name'] = virtual_env_name
-        self.state_variables['loaded_virtual_envs'] = virtual_env_list
+        self.state_variables["project_folder"] = project_folder
+        self.state_variables["virtual_env_name"] = virtual_env_name
+        self.state_variables["loaded_virtual_envs"] = virtual_env_list
 
     def _set_existing_python_env(self, curr_dir, current_venv, virtual_envs):
         """
@@ -139,17 +146,21 @@ class P4cMan(QMainWindow):
         if self.python_interpreters == {}:
             self.python_thread_worker = PythonInterpreters()
             self.python_thread_worker.finished.connect(self._set_python_interpreters)
-            self.python_thread_worker.finished.connect(self.python_thread_worker.deleteLater)
+            self.python_thread_worker.finished.connect(
+                self.python_thread_worker.deleteLater
+            )
             self.python_thread_worker.start()
 
-        self.libraries.selection_location_from_main(curr_dir, current_venv, virtual_envs)
+        self.libraries.selection_location_from_main(
+            curr_dir, current_venv, virtual_envs
+        )
 
     def _setup_main_app_ui(self):
         """
         Sets up the main application UI.
         """
-        self.libraries = Library(config = self.config)
-        self.installer = Installer(config = self.config)
+        self.libraries = Library(config=self.config)
+        self.installer = Installer(config=self.config)
         self.dependency_tree = DependencyTree()
         self.analysis = Analysis()
         self.settings = Setting()
@@ -161,16 +172,22 @@ class P4cMan(QMainWindow):
             "Dependency Tree": self.dependency_tree,
             "Analysis": self.analysis,
             "Settings": self.settings,
-            "About": self.about
+            "About": self.about,
         }
         self.navLists = self.contentDict.keys()
         main_layout = QHBoxLayout(self.container)
         main_layout.setContentsMargins(
-            *self.config.get("ui", {}).get('window', {}).get('mainLayout', {}).get('contentsMargin', [0, 0, 0, 0])
+            *self.config.get("ui", {})
+            .get("window", {})
+            .get("mainLayout", {})
+            .get("contentsMargin", [0, 0, 0, 0])
         )
 
         main_layout.setSpacing(
-            self.config.get("ui", {}).get('window', {}).get('mainLayout', {}).get('spacing', 0)
+            self.config.get("ui", {})
+            .get("window", {})
+            .get("mainLayout", {})
+            .get("spacing", 0)
         )
 
         # Add Side Bar
@@ -180,20 +197,19 @@ class P4cMan(QMainWindow):
         main_layout.addWidget(side_bar)
         main_layout.addWidget(self.content_stack, 1)
 
-        self.navItems.currentRowChanged.connect(
-            self.content_stack.setCurrentIndex)
+        self.navItems.currentRowChanged.connect(self.content_stack.setCurrentIndex)
 
     def _set_status_installer(self):
         self._installer_populated = True
         self.installer.set_status(self.current_libraries)
 
-    def _retrieve_libraries_content(self, libraries:list):
+    def _retrieve_libraries_content(self, libraries: list):
         """
         Retrieves the content of the libraries.
         Args:
             libraries (list): A list of libraries.
         """
-        self.current_libraries = [library['name'] for library in libraries]
+        self.current_libraries = [library["name"] for library in libraries]
         if self._installer_populated:
             self._set_status_installer()
 
@@ -209,7 +225,7 @@ class P4cMan(QMainWindow):
         """
         Switches the content of the application.
         """
-        if hasattr(self, 'onboarding_widget'):
+        if hasattr(self, "onboarding_widget"):
             self.onboarding_widget.worker.thread_library.deleteLater()
         if self.main_stack.currentWidget() != self.container:
             self.main_stack.setCurrentWidget(self.container)
@@ -220,8 +236,14 @@ class P4cMan(QMainWindow):
         """
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setGeometry(*self.config.get("ui", {}).get('window', {}).get("geometry", [100, 100, 800, 600]))
-        self.setMinimumSize(*self.config.get("ui", {}).get('window', {}).get("minSize", [800, 600]))
+        self.setGeometry(
+            *self.config.get("ui", {})
+            .get("window", {})
+            .get("geometry", [100, 100, 800, 600])
+        )
+        self.setMinimumSize(
+            *self.config.get("ui", {}).get("window", {}).get("minSize", [800, 600])
+        )
         self.appName = self.config.get("application", {}).get("name", "")
 
     def side_bar(self):
@@ -234,17 +256,29 @@ class P4cMan(QMainWindow):
         side_bar.setObjectName("sideBar")
         # sideBar.setFixedWidth(250)
         side_bar.setMinimumWidth(
-            self.config.get("ui", {}).get('window', {}).get("sideBar", {}).get("minWidth", 200)
+            self.config.get("ui", {})
+            .get("window", {})
+            .get("sideBar", {})
+            .get("minWidth", 200)
         )
         side_bar.setMaximumWidth(
-            self.config.get("ui", {}).get('window', {}).get("sideBar", {}).get("maxWidth", 200)
+            self.config.get("ui", {})
+            .get("window", {})
+            .get("sideBar", {})
+            .get("maxWidth", 200)
         )
         side_bar_layout = QVBoxLayout(side_bar)
         side_bar_layout.setContentsMargins(
-            *self.config.get("ui", {}).get('window', {}).get("sideBar", {}).get('contentMargins', [10, 10, 10, 10])
+            *self.config.get("ui", {})
+            .get("window", {})
+            .get("sideBar", {})
+            .get("contentMargins", [10, 10, 10, 10])
         )
         side_bar_layout.setSpacing(
-            self.config.get('ui', {}).get('window', {}).get("sideBar", {}).get('spacing', 15)
+            self.config.get("ui", {})
+            .get("window", {})
+            .get("sideBar", {})
+            .get("spacing", 15)
         )
         self.control_bar = ControlBar(self, self.config)
         self.control_bar.setContentsMargins(2, 2, 0, 0)
@@ -256,15 +290,20 @@ class P4cMan(QMainWindow):
         for navListItems in self.navLists:
             navList.addItem(navListItems)
         navList.setContentsMargins(
-            *self.config.get('ui', {}).get('window', {}).get("sideBar", {}).get('navListContentMargin', [0, 0, 0, 0])
+            *self.config.get("ui", {})
+            .get("window", {})
+            .get("sideBar", {})
+            .get("navListContentMargin", [0, 0, 0, 0])
         )
         navList.setSpacing(
-            self.config.get('ui', {}).get('window', {}).get("sideBar", {}).get('navListSpacing', 3)
+            self.config.get("ui", {})
+            .get("window", {})
+            .get("sideBar", {})
+            .get("navListSpacing", 3)
         )
 
         side_bar_layout.addWidget(navList)
         return side_bar, navList
-
 
     def showEvent(self, a0):
         self.ui_loaded.emit()
@@ -315,9 +354,7 @@ class P4cMan(QMainWindow):
             a0 (QCloseEvent): The close event.
         """
         self.main_stack.setCurrentWidget(self.saving_page)
-        if not self.state_variables.get('project_folder', "") == "":
-            save_state(
-                self.state_variables
-            )
+        if not self.state_variables.get("project_folder", "") == "":
+            save_state(self.state_variables)
             save_file(self.installer.all_libraries)
         super().closeEvent(a0)
