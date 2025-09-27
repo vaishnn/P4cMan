@@ -75,6 +75,8 @@ class P4cMan(QMainWindow):
         self.main_stack = QStackedWidget(self)
 
         self.setCentralWidget(self.main_stack)
+
+        # If onboarding was completed in previous runs, no need to hog memory by having onboarding
         if self.state_variables.get("project_folder", "") == "":
             self.onboarding_widget = OnboardingPage(self.config, self)
             self.main_stack.setCurrentWidget(self.onboarding_widget)
@@ -133,12 +135,19 @@ class P4cMan(QMainWindow):
         self.state_variables["virtual_env_name"] = virtual_env_name
         self.state_variables["loaded_virtual_envs"] = virtual_env_list
 
-    def _set_existing_python_env(self, curr_dir, current_venv, virtual_envs):
+        # Give project folder to other directories
+        self._set_project_folder_location_in_different_widgets(project_folder)
+
+    def _set_project_folder_location_in_different_widgets(self, project_folder):
+        """Give the project folder's location to every widget which needs it for their functionality"""
+        self.dependency_tree.set_project_folder(project_folder)
+
+    def _set_existing_python_env(self, project_folder, current_venv, virtual_envs):
         """
         Sets the existing python environment for the application.
 
         Args:
-            curr_dir (str): The current directory.
+            project_folder (str): The project directory.
             current_venv (str): The current virtual environment.
             virtual_envs (list): A list of virtual environments.
         """
@@ -152,8 +161,11 @@ class P4cMan(QMainWindow):
             self.python_thread_worker.start()
 
         self.libraries.selection_location_from_main(
-            curr_dir, current_venv, virtual_envs
+            project_folder, current_venv, virtual_envs
         )
+
+        # Give project folder to other directories
+        self._set_project_folder_location_in_different_widgets(project_folder)
 
     def _setup_main_app_ui(self):
         """
@@ -353,8 +365,13 @@ class P4cMan(QMainWindow):
         Args:
             a0 (QCloseEvent): The close event.
         """
+        # Set the saving page widget if the saving taking alot of time (thread Processes)
         self.main_stack.setCurrentWidget(self.saving_page)
+
+        # They will always get during every change in env or project folder,
+        # it won't be set if user never completed the initial steps so there are no state to be saved
         if not self.state_variables.get("project_folder", "") == "":
             save_state(self.state_variables)
             save_file(self.installer.all_libraries)
+
         super().closeEvent(a0)

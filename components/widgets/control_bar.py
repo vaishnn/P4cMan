@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from .buttons import HoverIconButton  # Import from the same package
 from helpers.utils import resource_path
 
+
 class ControlBar(QWidget):
     """
     A Widget that contains the window controls of the application, like a custom title bar.
@@ -17,6 +18,7 @@ class ControlBar(QWidget):
         self.setObjectName("controlBar")
 
         self._layout()
+        self.drag_offset = None
         self._mouse_press_pos = None
 
     def _layout(self):
@@ -34,18 +36,15 @@ class ControlBar(QWidget):
 
         self._setup_buttons()
 
-        name_label = QLabel(
-            self.config.get('app', {}).get('name', 'P4cMan')
-        )
+        name_label = QLabel(self.config.get("app", {}).get("name", "P4cMan"))
         name_label.setObjectName("nameLabel")
-        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter )
+        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         name_label.setContentsMargins(4, 0, 0, 0)
         layout.addWidget(self.close_button)
         layout.addWidget(self.minimize_button)
         layout.addWidget(self.maximize_button)
 
         layout.addWidget(name_label)
-
 
         layout.addStretch()
         self.setLayout(layout)
@@ -57,7 +56,12 @@ class ControlBar(QWidget):
         """
         # Close Button
         self.close_button = HoverIconButton(
-            icon_path=resource_path(self.config.get('paths', {}).get('assets', {}).get('images', {}).get('close', "./assets/icons/close.svg"))
+            icon_path=resource_path(
+                self.config.get("paths", {})
+                .get("assets", {})
+                .get("images", {})
+                .get("close", "./assets/icons/close.svg")
+            )
         )
         self.close_button.setObjectName("closeButton")
         self.close_button.setFixedSize(12, 12)
@@ -65,7 +69,12 @@ class ControlBar(QWidget):
 
         # Minimize Button
         self.minimize_button = HoverIconButton(
-            icon_path=resource_path(self.config.get('paths', {}).get('assets', {}).get('images', {}).get('minimize', "./assets/icons/minimize.svg"))
+            icon_path=resource_path(
+                self.config.get("paths", {})
+                .get("assets", {})
+                .get("images", {})
+                .get("minimize", "./assets/icons/minimize.svg")
+            )
         )
         self.minimize_button.setObjectName("minimizeButton")
         self.minimize_button.setFixedSize(12, 12)
@@ -73,7 +82,12 @@ class ControlBar(QWidget):
 
         # Maximize Button
         self.maximize_button = HoverIconButton(
-            icon_path=resource_path(self.config.get('paths', {}).get('assets', {}).get('images', {}).get('maximize', "./assets/icons/maximize.svg"))
+            icon_path=resource_path(
+                self.config.get("paths", {})
+                .get("assets", {})
+                .get("images", {})
+                .get("maximize", "./assets/icons/maximize.svg")
+            )
         )
         self.maximize_button.setObjectName("maximizeButton")
         self.maximize_button.setFixedSize(12, 12)
@@ -85,22 +99,39 @@ class ControlBar(QWidget):
         else:
             self.parent_window.showMaximized()
 
-    def mousePressEvent(self, event: QMouseEvent): # type: ignore
-        self._mouse_press_pos = event.globalPosition().toPoint()
+    def mousePressEvent(self, event: QMouseEvent):  # type: ignore
+        """
+        On mouse press, we now calculate the offset of the click
+        from the window's top-left corner.
+        """
+        if event.button() == Qt.MouseButton.LeftButton:
+            # self.parent_window.pos() is the window's top-left corner
+            # event.globalPosition() is the mouse's position on the screen
+            self.drag_offset = (
+                event.globalPosition().toPoint() - self.parent_window.pos()
+            )
+
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event: QMouseEvent): # type: ignore
-        if self._mouse_press_pos is not None:
-            delta = event.globalPosition().toPoint() - self._mouse_press_pos
-            self.parent_window.move(self.parent_window.pos() + delta)
-            self._mouse_press_pos = event.globalPosition().toPoint()
+    def mouseMoveEvent(self, event: QMouseEvent):  # type: ignore
+        """
+        On mouse move, we calculate the absolute new position for the window
+        and move it there directly.
+        """
+        # Check if we are in a drag state (the offset has been set)
+        if self.drag_offset is not None:
+            # The new window position is the current mouse position minus our saved offset
+            new_position = event.globalPosition().toPoint() - self.drag_offset
+            self.parent_window.move(new_position)
 
         super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event: QMouseEvent): # type: ignore
-        self._mouse_press_pos = None
+    def mouseReleaseEvent(self, event: QMouseEvent):  # type: ignore
+        """On release, just clear the offset."""
+        self.drag_offset = None
         super().mouseReleaseEvent(event)
 
-    def mouseDoubleClickEvent(self, a0: QMouseEvent) -> None: # type: ignore
+    # mouseDoubleClickEvent remains the same
+    def mouseDoubleClickEvent(self, a0: QMouseEvent) -> None:  # type: ignore
         self.toggle_maximize()
         return super().mouseDoubleClickEvent(a0)

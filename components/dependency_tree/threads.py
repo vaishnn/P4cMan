@@ -8,10 +8,11 @@ class GNetworkLoader(QThread):
 
     graph_data = pyqtSignal(DiGraph, dict)
 
-    def __init__(self, file_path, parent=None):
-        self.file_path = file_path
+    def __init__(self, file_path: str, project_folder: str, parent=None):
         super().__init__(parent)
+        self.file_path = file_path
+        self.project_folder = project_folder
 
     def run(self):
-        G, layout = load_dependency_graph_data(self.file_path)
+        G, layout = load_dependency_graph_data(self.file_path, self.project_folder)
         self.graph_data.emit(G, layout)

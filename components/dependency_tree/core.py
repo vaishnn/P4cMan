@@ -10,6 +10,8 @@ os.environ["QT_LOGGING_RULES"] = "qt.qpa.cocoa.*.warning=false"
 
 
 class DependencyTree(QWidget):
+    """Create the Dependecny Graph"""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._parent = parent
@@ -27,11 +29,15 @@ class DependencyTree(QWidget):
         self.graph_layout = None
 
         self.current_file = None
-
+        self.project_folder = None
         self._file_path_selector_page()
 
     def _setup_stacked_widget(self):
         pass
+
+    def set_project_folder(self, project_folder):
+        """Set the project folder's location as other functions need it"""
+        self.project_folder = project_folder
 
     def _file_path_selector_page(self):
         # Push button for selecting location
@@ -43,6 +49,7 @@ class DependencyTree(QWidget):
         self.file_selector.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.spacer_item = QWidget()
+        self.spacer_item.setObjectName("GraphWidget")
         self.graph_widget = GraphWidget()
         self.graph_widget.setMaximumHeight(0)
         self.graph_widget.setVisible(False)
@@ -117,15 +124,17 @@ class DependencyTree(QWidget):
                 name="spacer_animation",
             )
 
-            self.graph_loader = GNetworkLoader(file_path)
+            if self.project_folder is None:
+                return
+
+            self.graph_loader = GNetworkLoader(file_path, self.project_folder)
             self.graph_loader.graph_data.connect(self._get_graph_data)
             self.graph_loader.start()
+            self.graph_loader.finished.connect(self.graph_loader.deleteLater)
             # Just templating here (the tree drawer in utils will be called here)
 
     def _get_graph_data(self, G: DiGraph, layout: dict):
         """Now start the construction of GraphicItems when we reiceve graph data"""
-
-        self.graph_loader = None
         self.graph = G
         self.graph_layout = layout
 
@@ -133,7 +142,7 @@ class DependencyTree(QWidget):
         self._animate(
             object_to_be_animated=self.graph_widget,
             property_to_be_animated=b"maximumHeight",
-            final_dimension=400,
+            final_dimension=800,
             initial_dimension=0,
             visibility=True,
             name="graph_widget_animation",
@@ -141,7 +150,6 @@ class DependencyTree(QWidget):
         )
         self.graph_widget.set_graph_and_position(layout, G)
         self.graph_widget.setVisible(True)
-        print(self.graph_widget.sizeHint().width())
 
     def _directory_file_check(self):
         """This is for checking if the file is a valid python file and is in project folder"""

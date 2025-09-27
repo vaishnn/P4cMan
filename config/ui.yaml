@@ -24,6 +24,12 @@ ui:
 
   # Sizing, spacing, and radius values
   dimensions:
+    scrollbar:
+      size: "10px" # The width of a vertical scrollbar or height of a horizontal one
+      margin: "0px" # The margin around the scrollbar
+      handle:
+        minSize: "20px" # The minimum length of the draggable handle
+        borderRadius: "5px"
     fontSize:
       mainFont: 14
       verysmall: "10px"
@@ -53,6 +59,7 @@ ui:
     background:
       main: "#2D2D2D"
       sidebar: "#272321"
+      dark: "#000000"
       content: "#383838"
       input: "#242424"
       inputSecondary: "#4A4A4A"
@@ -281,10 +288,51 @@ stylesheet:
     #cancelEnvironmentCreatorButton:hover {
       background-color: {{ ui.colors.background.hover }};
     }
-
-    #GraphWidget {
-      background-color: transparent ;
+    QGraphicsView {
+      background-color: {{ ui.colors.border.dark }};
+      color: {{ ui.colors.text.muted }};
+      border: 1px solid {{ ui.colors.border.light }};
+      border-radius: {{ ui.dimensions.borderRadius.medium }};
     }
+
+    QScrollBar:vertical, QScrollBar:horizontal {
+        border: none;
+        background: {{ ui.colors.background.main }};
+        width: {{ ui.dimensions.scrollbar.size }};
+        height: {{ ui.dimensions.scrollbar.size }};
+        margin: {{ ui.dimensions.scrollbar.margin }};
+    }
+
+    QScrollBar::handle:vertical,
+    QScrollBar::handle:horizontal {
+        background: {{ ui.colors.background.inputSecondary }};
+        min-height: {{ ui.dimensions.scrollbar.handle.minSize }};
+        min-width: {{ ui.dimensions.scrollbar.handle.minSize }};
+        border-radius: {{ ui.dimensions.scrollbar.handle.borderRadius }};
+    }
+
+    QScrollBar::handle:vertical:hover,
+    QScrollBar::handle:horizontal:hover {
+        background: {{ ui.colors.background.hover }};
+    }
+
+    QScrollBar::handle:vertical:pressed,
+    QScrollBar::handle:horizontal:pressed {
+        background: {{ ui.colors.background.pressed }};
+    }
+
+    QScrollBar::add-line,
+    QScrollBar::sub-line {
+        height: 0px;
+        width: 0px;
+        background: none;
+    }
+
+    QScrollBar::add-page,
+    QScrollBar::sub-page {
+        background: none;
+    }
+
   initScreen: |
     #container {
       background-color: {{ ui.colors.background.main }};
@@ -298,4 +346,9 @@ stylesheet:
       border-radius: {{ ui.dimensions.borderRadius.medium }};
       padding: {{ ui.dimensions.padding.small }};
       font-size: {{ ui.dimensions.fontSize.medium }};
+    }
+unused: |
+  #GraphWidget {
+      background-color: {{ ui.colors.background.dark }};
+      border-radius: {{ ui.dimensions.borderRadius.large }}
     }
