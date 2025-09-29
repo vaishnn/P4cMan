@@ -1,9 +1,15 @@
 import pymunk
+import os
 from .physics import (
     DAMPING,
+    ELASTICITY,
+    FRICTION,
+    LINEWIDTH,
+    MASS,
     MAX_FORCE,
     NODE_RADIUS,
-    REST_LENGTH,
+    REPULSION_STRENGTH,
+    SPACE_DAMPING,
     STIFFNESS,
     TIMESTEP,
     dragged_body_velocity_func,
@@ -13,39 +19,30 @@ from PyQt6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsLineItem,
     QGraphicsScene,
+    QGraphicsTextItem,
     QGraphicsView,
 )
 from networkx.classes import DiGraph
 from PyQt6.QtCore import QPointF, QTimer, Qt
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPen
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 
 
 class NodeItem(QGraphicsEllipseItem):
-    def __init__(self, node_id, x, y, radius, text, physics_veiw, node_data=None):
-        super().__init__(-radius, radius, radius * 2, radius * 2)
+    def __init__(self, text, radius, node_data=None):
+        super().__init__(0, 0, radius * 2, radius * 2)
 
-        # setting up our basic variables
-        self.physics_view = physics_veiw
-        self.radius = radius
-        self.node_id = node_id
-        self.setPos(x, y)
+        self.label = QGraphicsTextItem(os.path.basename(text))
+        self.label.setParentItem(self)
+        self.label.setPos(0, -radius)
+        font = QFont()
+        font.setPointSize(20)
+        self.label.setFont(font)
 
-        # Visual styling
-        self.setPen(QPen(Qt.GlobalColor.black, 2))
-        self.setBrush(QBrush(Qt.GlobalColor.blue))
-
-        # Enable Dragging
-        self.setFlag(QGraphicsEllipseItem.GraphicsItemFlag.ItemIsMovable)
-        self.setFlag(QGraphicsEllipseItem.GraphicsItemFlag.ItemIsSelectable)
-
-    def paint(
-        self,
-        painter,
-        option,
-        widget=...,
-    ) -> None:
-        # Currently doing nothing but will be used after words
-        return super().paint(painter, option, widget)
+    def set_font_size(self, size):
+        font = self.label.font()
+        font.setPointSize(size)
+        self.label.setFont(font)
+        self.update()
 
 
 class NodeConnection(QGraphicsLineItem):
@@ -87,16 +84,10 @@ class GraphWidget(QGraphicsView):
         # physics pymunk basic setup, can be more complex
         self.space = pymunk.Space()
         self.space.gravity = (0, 0)
-        self.space.damping = 0.8
+        self.space.damping = SPACE_DAMPING
 
         self.mouse_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
         self.mouse_joint = None
-
-        # physics engine parameters
-        self.spring_constant = 1000
-        self.attraction_force = 500
-        self.spring_constraint = None
-        self.connection_line = None
 
         # Maps node_id -> QGraphicEllipseItem
         self.nodes = {}
@@ -124,6 +115,9 @@ class GraphWidget(QGraphicsView):
         # for panning
         self._last_pen_pos = None
 
+        # for moving object
+        self._moving_object = None
+
     def _update_simulation(self):
         """this will update the position of bodies and nodes"""
 
@@ -139,6 +133,26 @@ class GraphWidget(QGraphicsView):
             pos2 = self.bodies[v].position
             line.setLine(pos1.x, pos1.y, pos2.x, pos2.y)
 
+        # self._repulsion_strength()
+
+    # This will have a time complexity of O(N^2), so might need to find a better way to have repulsion
+    def _repulsion_strength(self):
+        for body_a in self.bodies.values():
+            for body_b in self.bodies.values():
+                if body_a == body_b:
+                    continue
+
+                direction_vector = body_a.position - body_b.position
+                r = direction_vector.length
+                if r < 1:
+                    r = 1
+
+                force_magnitute = REPULSION_STRENGTH / r**2
+                force_vector = direction_vector.normalized() * force_magnitute
+
+                body_a.apply_force_at_local_point(force_vector, (0, 0))
+                body_b.apply_force_at_local_point(-force_vector, (0, 0))
+
     def _create_bodies_and_nodes(self):
         """Create pymunk bodies and nodes for all the nodes in graphs"""
 
@@ -147,22 +161,24 @@ class GraphWidget(QGraphicsView):
 
         for idx, node_id in enumerate(self.graph.nodes()):
             # Can be any number but then all physics will be changed
-            mass = 1.0
+            mass = MASS
             moment = pymunk.moment_for_circle(mass, 0, NODE_RADIUS)
             body = pymunk.Body(mass, moment)
             body.position = tuple(self.graph_nodes_position[node_id])
             shape = pymunk.Circle(body, NODE_RADIUS)
-            shape.friction = 0.9
+            shape.friction = FRICTION
 
-            shape.elasticity = 0.8
+            shape.elasticity = ELASTICITY
             shape.node_id = node_id
 
             self.space.add(body, shape)
 
             self.original_velocities_functions[body] = body.velocity_func
 
-            ellipse = QGraphicsEllipseItem(0, 0, NODE_RADIUS * 2, NODE_RADIUS * 2)
+            ellipse = NodeItem(node_id, NODE_RADIUS)
+            # ellipse = QGraphicsEllipseItem(0, 0, 2 * NODE_RADIUS, 2 * NODE_RADIUS)
             ellipse.setBrush(QBrush(QColor("lightblue")))
+            ellipse.setToolTip(node_id)
 
             ellipse.setPen(QPen(Qt.GlobalColor.black))
             self._scene.addItem(ellipse)
@@ -174,19 +190,20 @@ class GraphWidget(QGraphicsView):
         for u, v in self.graph.edges():
             body1 = self.bodies[u]
             body2 = self.bodies[v]
+            distance = (body1.position - body2.position).length
             spring = pymunk.DampedSpring(
                 body1,
                 body2,
                 anchor_a=(0, 0),
                 anchor_b=(0, 0),
-                rest_length=REST_LENGTH,
+                rest_length=distance,
                 stiffness=STIFFNESS,
                 damping=DAMPING,
             )
 
             self.space.add(spring)
             line = QGraphicsLineItem()
-            line.setPen(QPen(Qt.GlobalColor.black, 2))
+            line.setPen(QPen(Qt.GlobalColor.black, LINEWIDTH))
             self._scene.addItem(line)
             self.edges[(u, v)] = line
 
@@ -262,9 +279,11 @@ class GraphWidget(QGraphicsView):
             point = pymunk.Vec2d(pos.x(), pos.y())
             shape_info = self.space.point_query_nearest(point, 0, pymunk.ShapeFilter())
 
-            if shape_info:
+            if shape_info is not None:
                 dragged_body = shape_info.shape.body
                 dragged_node_id = shape_info.shape.node_id
+
+                self._moving_object = (dragged_body, dragged_node_id)
 
                 if dragged_body is None:
                     return
@@ -303,6 +322,7 @@ class GraphWidget(QGraphicsView):
 
             self._clear_modified_bodies()
 
+        self._moving_object = None
         return super().mouseReleaseEvent(event)
 
     def _clear_modified_bodies(self):
