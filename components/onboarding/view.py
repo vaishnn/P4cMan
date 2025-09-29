@@ -1,4 +1,5 @@
 import os
+from sys import platform
 from PyQt6.QtWidgets import (
     QFrame,
     QVBoxLayout,
@@ -17,6 +18,9 @@ from ..widgets.helper_classes import LineEdit
 from .utils import loading_virtual_env, commit_action
 from ..widgets.control_bar import ControlBar
 from helpers.utils import resource_path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OnboardingPage(QWidget):
@@ -233,18 +237,27 @@ class OnboardingPage(QWidget):
         if text in env_names:
             commit_action(self, "Same name environment already exist")
         else:
+            executable_name = resource_path(
+                self.config.get("paths", {})
+                .get("executables", {})
+                .get("find_local_environment", {})
+                .get("darwin", "./find_local_env")
+            )
+            if platform == "win32":
+                executable_name = resource_path(  # noqa: F841
+                    self.config.get("paths", {})
+                    .get("executables", {})
+                    .get("find_local_environment", {})
+                    .get(platform, "./find_local_env.exe")
+                )
+
             self.worker.emit_create_virtual_env(
                 self.project_location,
                 self.drop_down_for_creating_python_env.currentText()
                 .split(":")[1]
                 .strip(),
                 text,
-                resource_path(
-                    self.config.get("paths", {})
-                    .get("executables", {})
-                    .get("find_local_environment", {})
-                    .get("darwin", "./find_local_env")
-                ),
+                resource_path(executable_name),
             )
 
     def _update_widget(self, code: int, venv_path: str, venv_name, all_venv_names):
@@ -270,14 +283,23 @@ class OnboardingPage(QWidget):
             self, "Selecting Directory", directory=os.path.expanduser("~")
         )
         if directory:
-            self.worker.emit_signal_for_virtual_envs(
-                directory,
-                resource_path(
+            executable_path = (
+                self.config.get("paths", {})
+                .get("executables", {})
+                .get("find_local_environment", {})
+                .get("darwin", "./find_local_env")
+            )
+
+            if platform == "win32":
+                executable_path = (
                     self.config.get("paths", {})
                     .get("executables", {})
                     .get("find_local_environment", {})
-                    .get("darwin", "./find_local_env")
-                ),
+                    .get("win32", "./find_local_env.exe")
+                )
+            self.worker.emit_signal_for_virtual_envs(
+                directory,
+                resource_path(executable_path),
             )
             self.project_location = directory
             self.browse_label.setText(f"Selected: {directory}")

@@ -1,5 +1,8 @@
 import pymunk
 import os
+import networkx as nx
+
+from components.dependency_tree.threads import GNetworkLoader
 from .physics import (
     DAMPING,
     ELASTICITY,
@@ -8,7 +11,6 @@ from .physics import (
     MASS,
     MAX_FORCE,
     NODE_RADIUS,
-    REPULSION_STRENGTH,
     SPACE_DAMPING,
     STIFFNESS,
     TIMESTEP,
@@ -23,20 +25,25 @@ from PyQt6.QtWidgets import (
     QGraphicsView,
 )
 from networkx.classes import DiGraph
-from PyQt6.QtCore import QPointF, QTimer, Qt
+from PyQt6.QtCore import QPointF, QRectF, QTimer, Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 
 
 class NodeItem(QGraphicsEllipseItem):
+    """Custom ellipse Item for nodes of our dependency graph"""
+
     def __init__(self, text, radius, node_data=None):
         super().__init__(0, 0, radius * 2, radius * 2)
 
         self.label = QGraphicsTextItem(os.path.basename(text))
-        self.label.setParentItem(self)
-        self.label.setPos(0, -radius)
         font = QFont()
-        font.setPointSize(20)
+        font.setPointSize(80)
         self.label.setFont(font)
+        self.label.setParentItem(self)
+        self.label.setPos(
+            -self.label.boundingRect().width() / 2 + radius,
+            -radius - 50,
+        )
 
     def set_font_size(self, size):
         font = self.label.font()
@@ -106,22 +113,35 @@ class GraphWidget(QGraphicsView):
         self.timer = QTimer()
         self.timer.timeout.connect(self._update_simulation)
 
-        # Temprary colors
-        self.dot_spacing = 200
-        self.dot_radius = 20
-        self.dot_color = QColor("#cccccc")  # A light gray
-        self.background_color = QColor("#ffffff")  # White background
-
         # for panning
         self._last_pen_pos = None
 
         # for moving object
         self._moving_object = None
 
+        # for a large pannable scene
+        very_large_rect = QRectF(-100000, -100000, 200000, 200000)
+        self._scene.setSceneRect(very_large_rect)
+
+        # Object for creating graph
+        self.graph_loader = None
+
+    def _reset_layout(self):
+        pass
+
+    def _changing_layout(self, layout_name):
+        pass
+
+    def _home(self):
+        pass
+
     def _update_simulation(self):
         """this will update the position of bodies and nodes"""
 
         self.space.step(TIMESTEP)
+
+        if self.nodes == {} or self.edges == {} or self.bodies == {}:
+            return
 
         for node_id, ellipse in self.nodes.items():
             body = self.bodies[node_id]
@@ -147,11 +167,65 @@ class GraphWidget(QGraphicsView):
                 if r < 1:
                     r = 1
 
-                force_magnitute = REPULSION_STRENGTH / r**2
+                force_magnitute = 50000 / r**2
                 force_vector = direction_vector.normalized() * force_magnitute
 
                 body_a.apply_force_at_local_point(force_vector, (0, 0))
                 body_b.apply_force_at_local_point(-force_vector, (0, 0))
+
+    def get_graph(self, file_path, project_folder):
+        self.graph_loader = GNetworkLoader(file_path, project_folder)
+        self.graph_loader.graph_data.connect(self._set_graph_data)
+        self.graph_loader.start()
+        self.graph_loader.finished.connect(self.graph_loader.deleteLater)
+
+    def _clear_scene(self):
+        """Clear the scene before creating a new phone"""
+
+        self._scene.clear()
+
+        # clear the dictionaries
+        self.nodes.clear()
+        self.bodies.clear()
+        self.edges.clear()
+
+        # Remove all the shapes
+        for shape in list(self.space.shapes):
+            self.space.remove(shape)
+
+        # Remove all constraints
+        for constraint in list(self.space.constraints):
+            self.space.remove(constraint)
+
+        # Remove all bodies
+        for body in list(self.space.bodies):
+            self.space.remove(body)
+
+    def _set_graph_data(self, G, node):
+        self._clear_scene()
+        self.graph = G
+        self.dependency_node = node
+        self._generate_shell_layout()
+        self._create_bodies_and_nodes()
+        self.timer.start(int(TIMESTEP * 100))
+
+    def _generate_shell_layout(self):
+        """Generate a concentric shell layout"""
+        if self.graph is None:
+            return {}
+
+        levels = nx.shortest_path_length(self.graph, source=self.dependency_node.path)
+        nodes_by_level = {}
+        for node_id, level in levels.items():
+            if level not in nodes_by_level:
+                nodes_by_level[level] = []
+            nodes_by_level[level].append(node_id)
+
+        # This is the list we pass to networkx
+        shell_list = [nodes for level, nodes in sorted(nodes_by_level.items())]
+        self.graph_nodes_position = nx.shell_layout(
+            self.graph, nlist=shell_list, scale=5000
+        )
 
     def _create_bodies_and_nodes(self):
         """Create pymunk bodies and nodes for all the nodes in graphs"""
@@ -159,7 +233,7 @@ class GraphWidget(QGraphicsView):
         if self.graph is None or self.graph_nodes_position is None:
             return
 
-        for idx, node_id in enumerate(self.graph.nodes()):
+        for node_id, attributes in self.graph.nodes(data=True):
             # Can be any number but then all physics will be changed
             mass = MASS
             moment = pymunk.moment_for_circle(mass, 0, NODE_RADIUS)
@@ -177,10 +251,10 @@ class GraphWidget(QGraphicsView):
 
             ellipse = NodeItem(node_id, NODE_RADIUS)
             # ellipse = QGraphicsEllipseItem(0, 0, 2 * NODE_RADIUS, 2 * NODE_RADIUS)
-            ellipse.setBrush(QBrush(QColor("lightblue")))
+            ellipse.setBrush(QBrush(QColor("#bfbfbf")))
             ellipse.setToolTip(node_id)
 
-            ellipse.setPen(QPen(Qt.GlobalColor.black))
+            ellipse.setPen(QPen(Qt.GlobalColor.white))
             self._scene.addItem(ellipse)
             ellipse.setPos(body.position.x - NODE_RADIUS, body.position.y - NODE_RADIUS)
             ellipse.setZValue(1)
@@ -203,36 +277,9 @@ class GraphWidget(QGraphicsView):
 
             self.space.add(spring)
             line = QGraphicsLineItem()
-            line.setPen(QPen(Qt.GlobalColor.black, LINEWIDTH))
+            line.setPen(QPen(QColor("#42484c"), LINEWIDTH))
             self._scene.addItem(line)
             self.edges[(u, v)] = line
-
-    def _draw_background(
-        self, painter, rect
-    ) -> None:  # Can be implemented for preference look
-        """This event handler is called whenever the widget needs to be repainted."""
-        if painter is None:
-            return
-
-        # Set a solid background color first
-        painter.fillRect(self.rect(), self.background_color)
-
-        # Configure the painter for drawing dots
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(Qt.PenStyle.NoPen)  # No outline for the dots
-        painter.setBrush(self.dot_color)
-
-        # Get the dimensions of the widget
-        width = self.width()
-        height = self.height()
-
-        # Draw the grid of dots using nested loops
-        for x in range(0, width, self.dot_spacing):
-            for y in range(0, height, self.dot_spacing):
-                # The painter draws relative to the widget's top-left corner
-                painter.drawEllipse(x, y, self.dot_radius * 2, self.dot_radius * 2)
-        painter.restore()
-        painter.save()
 
     def set_graph_and_position(self, position: dict, graph: DiGraph):
         """Set's networkX graph to internal variable"""

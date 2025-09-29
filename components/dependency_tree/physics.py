@@ -20,8 +20,7 @@ FRICTION = 0.9
 ELASTICITY = 0.8
 MASS = 1.0
 
-LINEWIDTH = 5
-REPULSION_STRENGTH = 500000
+LINEWIDTH = 3
 
 
 def dragged_body_velocity_func(body, gravity, damping, dt):

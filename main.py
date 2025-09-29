@@ -20,6 +20,7 @@ UI_FILE_PATH = resource_path("config/ui.yaml")
 CONTROLS_FILE_PATH = resource_path("config/paths.yaml")
 PATHS_FILE_PATH = resource_path("config/application.yaml")
 APPLICATION_PATH = resource_path("config/controls.yaml")
+STYLE_SHEET_PATH = resource_path("config/style.yaml")
 
 
 if __name__ == "__main__":
@@ -46,7 +47,11 @@ if __name__ == "__main__":
 
     state = load_state()
     config: dict = load_config(
-        UI_FILE_PATH, CONTROLS_FILE_PATH, PATHS_FILE_PATH, APPLICATION_PATH
+        UI_FILE_PATH,
+        CONTROLS_FILE_PATH,
+        PATHS_FILE_PATH,
+        APPLICATION_PATH,
+        STYLE_SHEET_PATH,
     )
 
     app.setApplicationDisplayName(config.get("application", {}).get("name", ""))

@@ -1,91 +1,3 @@
-# All user interface settings
-ui:
-  window:
-    minSize: [800, 330]
-    geometry: [100, 100, 800, 600]
-    mainLayout:
-      contentsMargin: [0, 0, 0, 0]
-      spacing: 0
-    sideBar:
-      minWidth: 200
-      maxWidth: 200
-      contentMargins: [10, 10, 10, 10]
-      spacing: 15
-      navListContentMargin: [0, 0, 0, 0]
-      navListSpacing: 3
-    library:
-      locationLayout:
-        contentMargin: [0, 0, 0, 0]
-      labelLocation:
-        contentMargin: [0, 0, 0, 0]
-    installer:
-      contentMargin: [0, 0, 0, 0]
-      roundedCornerRadius: 8
-
-  # Sizing, spacing, and radius values
-  dimensions:
-    scrollbar:
-      size: "10px" # The width of a vertical scrollbar or height of a horizontal one
-      margin: "0px" # The margin around the scrollbar
-      handle:
-        minSize: "20px" # The minimum length of the draggable handle
-        borderRadius: "5px"
-    fontSize:
-      mainFont: 14
-      verysmall: "10px"
-      small: "12px"
-      default: "13px"
-      medium: "14px"
-      large: "16px"
-    borderRadius:
-      small: "4px"
-      medium: "5px"
-      large: "10px"
-      circle: "6px"
-    padding:
-      small: "5px"
-      medium: "8px"
-      large: "10px"
-
-  # Color palette
-  colors:
-    primary: "#007bff"
-    secondary: "#6c757d"
-    success: "#28a745"
-    danger: "#dc3545"
-    warning: "#ffc107"
-    info: "#17a2b8"
-
-    background:
-      main: "#2D2D2D"
-      sidebar: "#272321"
-      dark: "#000000"
-      content: "#383838"
-      input: "#242424"
-      inputSecondary: "#4A4A4A"
-      hover: "#444444"
-      pressed: "#555555"
-      selected: "#333333"
-    text:
-      normal: "#EEEEEE"
-      muted: "#AAAAAA"
-      bright: "#FFFFFF"
-    border:
-      lighter: "#F5F5F5"
-      light: "#555555"
-      dark: "#3C3C3C"
-      # dark: transparent
-    button:
-      primary: "#005C99"
-      primaryHover: "#007ACC"
-      primaryPressed: "#004C80"
-      install: "#E5E5E5"
-    trafficLight:
-      close: "#FF605C"
-      minimize: "#FFBD44"
-      maximize: "#00CA4E"
-
-# Stylesheets referencing variables above
 stylesheet:
   main: |
     #mainWindowContainer {
@@ -111,21 +23,6 @@ stylesheet:
       background-color: {{ ui.colors.background.main }};
       border-top-right-radius: {{ ui.dimensions.borderRadius.large }};
       border-bottom-right-radius: {{ ui.dimensions.borderRadius.large }};
-    }
-    #closeButton {
-      background-color: {{ ui.colors.trafficLight.close }};
-      border-radius: {{ ui.dimensions.borderRadius.circle }};
-      border: none;
-    }
-    #minimizeButton {
-      background-color: {{ ui.colors.trafficLight.minimize }};
-      border-radius: {{ ui.dimensions.borderRadius.circle }};
-      border: none;
-    }
-    #maximizeButton {
-      background-color: {{ ui.colors.trafficLight.maximize }};
-      border-radius: {{ ui.dimensions.borderRadius.circle }};
-      border: none;
     }
     #navList {
       border: none;
@@ -289,7 +186,7 @@ stylesheet:
       background-color: {{ ui.colors.background.hover }};
     }
     QGraphicsView {
-      background-color: #222222;
+      background-color: {{ ui.colors.border.dark }};
       color: {{ ui.colors.text.muted }};
       border: 1px solid {{ ui.colors.border.light }};
       border-radius: {{ ui.dimensions.borderRadius.medium }};
@@ -332,7 +229,22 @@ stylesheet:
     QScrollBar::sub-page {
         background: none;
     }
-
+  nav-buttons: |
+    #closeButton {
+      background-color: {{ ui.colors.trafficLight.close }};
+      border-radius: {{ ui.dimensions.borderRadius.circle }};
+      border: none;
+    }
+    #minimizeButton {
+      background-color: {{ ui.colors.trafficLight.minimize }};
+      border-radius: {{ ui.dimensions.borderRadius.circle }};
+      border: none;
+    }
+    #maximizeButton {
+      background-color: {{ ui.colors.trafficLight.maximize }};
+      border-radius: {{ ui.dimensions.borderRadius.circle }};
+      border: none;
+    }
   initScreen: |
     #container {
       background-color: {{ ui.colors.background.main }};

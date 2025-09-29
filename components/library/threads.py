@@ -3,6 +3,10 @@ import os
 import subprocess
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import QPushButton
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Uninstall(QThread):
     """
@@ -10,7 +14,10 @@ class Uninstall(QThread):
     It runs `pip uninstall` in a separate thread and emits a signal
     with the result upon completion.
     """
-    finished = pyqtSignal(int, str, str, QPushButton) # (success_code, library_name, python_path, button)
+
+    finished = pyqtSignal(
+        int, str, str, QPushButton
+    )  # (success_code, library_name, python_path, button)
 
     def __init__(self, python_path, library, uninstall_button):
         super().__init__()
@@ -27,7 +34,10 @@ class Uninstall(QThread):
         if result.returncode == 0:
             self.finished.emit(1, self.library, self.python_path, self.uninstall_button)
         else:
-            self.finished.emit(-1, self.library, self.python_path, self.uninstall_button)
+            self.finished.emit(
+                -1, self.library, self.python_path, self.uninstall_button
+            )
+
 
 class LibraryWorker(QObject):
     """
@@ -35,10 +45,12 @@ class LibraryWorker(QObject):
     (fetching details, managing virtual environments) in a separate thread.
     It emits signals upon completion of tasks.
     """
+
     details_with_virtual_envs = pyqtSignal(str, list, list)
     new_virtual_env = pyqtSignal(int, str, str, list)
     virtual_envs = pyqtSignal(list)
     details = pyqtSignal(list)
+
     @pyqtSlot(str, str, str)
     def fetch_only_details(self, directory: str, load_library_exe: str, venv_name: str):
         """only fetches details of the library by running the compiled Go Code"""
@@ -52,13 +64,13 @@ class LibraryWorker(QObject):
             text=True,
         )
         if result_details.stderr:
-            print(result_details.stderr)
+            logger.error(result_details.stderr)
         if result_details.stdout.strip() == "":
             self.details.emit([])
             return
 
         try:
-            details = json.loads(result_details.stdout).get('installed', [])
+            details = json.loads(result_details.stdout).get("installed", [])
             if details is None:
                 self.details.emit([])
             else:
@@ -93,7 +105,9 @@ class LibraryWorker(QObject):
             return
 
     @pyqtSlot(str, str, str, str)
-    def initialize_new_virtual_env(self, directory: str, python_path: str, virtual_env_name: str, find_env_exe: str):
+    def initialize_new_virtual_env(
+        self, directory: str, python_path: str, virtual_env_name: str, find_env_exe: str
+    ):
         """
         Initializes a new virtual environment in the specified directory
         using the given Python path and virtual environment name.
@@ -109,25 +123,30 @@ class LibraryWorker(QObject):
         if not (directory or python_path or virtual_env_name, find_env_exe):
             self.new_virtual_env.emit(1, "", "", "")
         self.new_virtual_env.emit(0, "", "", [])
-        is_pip_preset = subprocess.run([python_path, "-m", "pip", "--version"],
+        is_pip_preset = subprocess.run(
+            [python_path, "-m", "pip", "--version"],
             capture_output=True,
             text=True,
         )
         if is_pip_preset.returncode == 1:
             # requires python>=3.4
             subprocess.run([python_path, "-m", "ensurepip", "--upgrade"])
-        subprocess.run([python_path, "-m", "venv", virtual_env_name], capture_output=True, text=True, check=False, cwd=directory)
-        result_venvs = subprocess.run(
-            [find_env_exe, directory],
+        subprocess.run(
+            [python_path, "-m", "venv", virtual_env_name],
             capture_output=True,
-            text=True
+            text=True,
+            check=False,
+            cwd=directory,
+        )
+        result_venvs = subprocess.run(
+            [find_env_exe, directory], capture_output=True, text=True
         )
         try:
-
             venvs = json.loads(result_venvs.stdout)
         except json.JSONDecodeError:
             venvs = []
         self.new_virtual_env.emit(1, directory, virtual_env_name, venvs)
+
 
 class LibraryThreads(QObject):
     """
@@ -137,6 +156,7 @@ class LibraryThreads(QObject):
     It acts as an interface, exposing signals to trigger operations in the worker
     thread and relaying the results back through its own signals.
     """
+
     new_virtual_env = pyqtSignal(int, str, str, list)
     details_with_virtual_envs = pyqtSignal(str, list, list)
     virtual_envs = pyqtSignal(list)
@@ -146,12 +166,14 @@ class LibraryThreads(QObject):
     get_details_with_virtual_envs = pyqtSignal(str, str, str)
     create_virtual_env = pyqtSignal(str, str, str, str)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.thread_library = QThread()
         self.worker = LibraryWorker()
         self.worker.moveToThread(self.thread_library)
-        self.worker.details_with_virtual_envs.connect(self.details_with_virtual_envs.emit)
+        self.worker.details_with_virtual_envs.connect(
+            self.details_with_virtual_envs.emit
+        )
         self.worker.virtual_envs.connect(self.virtual_envs.emit)
         self.worker.details.connect(self.details.emit)
         self.worker.new_virtual_env.connect(self.new_virtual_env.emit)
@@ -166,7 +188,9 @@ class LibraryThreads(QObject):
     def emit_signal_for_virtual_envs(self, directory, load_library_exe):
         self.get_virtual_envs.emit(directory, load_library_exe)
 
-    def emit_signal_for_details_with_virtual_envs(self, directory, load_library_exe, venv_name):
+    def emit_signal_for_details_with_virtual_envs(
+        self, directory, load_library_exe, venv_name
+    ):
         self.get_details_with_virtual_envs.emit(directory, load_library_exe, venv_name)
 
     def emit_create_virtual_env(self, directory, python_path, venv_name, find_env_exe):

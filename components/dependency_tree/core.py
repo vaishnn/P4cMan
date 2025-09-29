@@ -1,10 +1,13 @@
 import os
 import networkx as nx
-from networkx.classes.digraph import DiGraph
+
 from .graphic import GraphWidget
-from .threads import GNetworkLoader
+
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt
 from PyQt6.QtWidgets import QFileDialog, QLabel, QWidget, QVBoxLayout
+import logging
+
+logger = logging.getLogger(__name__)
 
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.cocoa.*.warning=false"
 
@@ -127,32 +130,27 @@ class DependencyTree(QWidget):
             if self.project_folder is None:
                 return
 
-            self.graph_loader = GNetworkLoader(file_path, self.project_folder)
-            self.graph_loader.graph_data.connect(self._get_graph_data)
-            self.graph_loader.start()
-            self.graph_loader.finished.connect(self.graph_loader.deleteLater)
-            # Just templating here (the tree drawer in utils will be called here)
+            self._get_graph_data()
 
-    def _get_graph_data(self, G: DiGraph, layout: dict):
+    def _get_graph_data(self):
         """Now start the construction of GraphicItems when we reiceve graph data"""
-        self.graph = G
-        self.graph_layout = layout
+        self.graph_widget.get_graph(self.current_file, self.project_folder)
 
         # Animating the graph layout
         self._animate(
             object_to_be_animated=self.graph_widget,
             property_to_be_animated=b"maximumHeight",
-            final_dimension=800,
+            final_dimension=4000,  # to move the limit past the possible size
             initial_dimension=0,
             visibility=True,
             name="graph_widget_animation",
             before=True,
         )
-        self.graph_widget.set_graph_and_position(layout, G)
         self.graph_widget.setVisible(True)
 
     def _directory_file_check(self):
         """This is for checking if the file is a valid python file and is in project folder"""
+        pass
 
     def _page_for_invalid_file(self):
         """

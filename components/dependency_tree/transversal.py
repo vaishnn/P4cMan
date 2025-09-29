@@ -2,6 +2,9 @@ import ast
 import os
 from dataclasses import dataclass
 from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
 
 EXCLUDE_DIRS: set
 
@@ -31,9 +34,14 @@ class DependencyNode:
     def __init__(self, name: str, path: str):
         self._name = name
         self._path = path
+        self._hash = hash((name, path))
         self._imported_modules = []
         self._dependencies = []
         self._dependents = []
+
+    @property
+    def hash(self):
+        return self._hash
 
     @property
     def name(self):
@@ -105,11 +113,10 @@ class ConditionalTracker(ast.NodeVisitor):
             while module_name[level] == ".":
                 level += 1
 
-            base_path = os.path.dirname(os.path.abspath(self.base_file))
-            file_path_parts = self.base_file.split(os.sep)
+            base_path = os.path.abspath(os.path.dirname(self.base_file))
+            file_path_parts = os.path.abspath(self.base_file).split(os.sep)
             if level > 1:
-                base_path = os.sep.join(file_path_parts[: -(level - 1)])
-
+                base_path = os.sep.join(file_path_parts[:-(level)])
             # Omitting the inital '.' and split into seperate parts
             module_path_parts = module_name[level:].split(".")
             candidate_path = os.path.join(base_path, *module_path_parts)

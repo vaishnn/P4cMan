@@ -67,6 +67,7 @@ def create_dependency_node(file_path: str, project_path: str) -> DependencyNode:
 def create_network_data(node: DependencyNode):
     """for creating networkx graph"""
     G = nx.DiGraph()
+    G.add_node(node.path, type="main", color="blue")
     queue = [node]
     visited_path = {node}
 
@@ -123,14 +124,13 @@ def create_file_dependency(
     node = create_dependency_node(file_path, project_folder)
 
     G = create_network_data(node)
-    layout = generate_shell_layout(G, node)
 
     # convert the tree to dict
     node_dict = tree_to_dict(node)
     with open(path_of_storing_json, "w") as file:
         json.dump(node_dict, file)
 
-    return G, layout
+    return G, node
 
 
 def load_file_dependency(path_of_storing_json: str):
@@ -144,10 +144,8 @@ def load_file_dependency(path_of_storing_json: str):
         return None, None
 
     G = create_network_data(node)
-    # layout = nx.layout.fruchterman_reingold_layout(G)
-    layout = generate_shell_layout(G, node)
 
-    return G, layout
+    return G, node
 
 
 def load_dependency_graph_data(
@@ -157,32 +155,10 @@ def load_dependency_graph_data(
     support_dir = get_app_support_directory()
     path_of_storing_json = os.path.join(support_dir, file_name)
 
-    # if os.path.exists(path_of_storing_json):
-    #     G, layout = load_file_dependency(path_of_storing_json)
+    G, node = create_file_dependency(file_path, project_path, path_of_storing_json)
 
-    # else:
-    # Pass the file from core
-    G, layout = create_file_dependency(file_path, project_path, path_of_storing_json)
-
-    return (G, layout)
-
-
-def generate_shell_layout(G: nx.DiGraph, node: DependencyNode) -> dict:
-    """Generate a concentric shell layout"""
-
-    levels = nx.shortest_path_length(G, source=node.path)
-    nodes_by_level = {}
-    for node_id, level in levels.items():
-        if level not in nodes_by_level:
-            nodes_by_level[level] = []
-        nodes_by_level[level].append(node_id)
-
-    # This is the list we pass to networkx
-    shell_list = [nodes for level, nodes in sorted(nodes_by_level.items())]
-    positions = nx.shell_layout(G, nlist=shell_list, scale=5000)
-    return positions
+    return G, node
 
 
 if __name__ == "__main__":
-    # dependency_graph = find_imports("components/library/core.py")
     pass

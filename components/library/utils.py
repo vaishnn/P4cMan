@@ -14,16 +14,13 @@ def rank_query(dataList, query):
         list: A new list containing the matching items from `dataList`, sorted by the relevance of the query's
               position within their 'name'. If no matches are found, an empty list is returned.
     """
-    lowerQuery = query.lower()
-    matches = [
-        item for item in dataList
-        if lowerQuery in item['name'].lower()
-    ]
+    lower_query = query.lower()
+    matches = [item for item in dataList if lower_query in item["name"].lower()]
     sorted_matches = sorted(
-        matches,
-        key=lambda item: item['name'].lower().find(lowerQuery)
+        matches, key=lambda item: item["name"].lower().find(lower_query)
     )
     return sorted_matches
+
 
 def human_readable_size(size: int) -> str:
     """
@@ -40,11 +37,11 @@ def human_readable_size(size: int) -> str:
         str: A string representing the size with its unit,
              e.g., "1.23 <span style='font-size:8pt'>KB</span>".
     """
-    if size/(1024*1024*1024)<0.1:
-        if size/(1024*1024)<0.1:
-            if size/(1024)<0.1:
+    if size / (1024 * 1024 * 1024) < 0.1:
+        if size / (1024 * 1024) < 0.1:
+            if size / (1024) < 0.1:
                 if size < 0.1:
-                    return f"{size*8} <span style='font-size:8pt'>b</span>"
+                    return f"{size * 8} <span style='font-size:8pt'>b</span>"
                 else:
                     return f"{size:.2f} <span style='font-size:8pt'>B</span>"
             else:
@@ -52,7 +49,10 @@ def human_readable_size(size: int) -> str:
         else:
             return f"{size / (1024 * 1024):.2f} <span style='font-size:8pt'>MB</span>"
     else:
-        return f"{size / (1024 * 1024 * 1024):.2f} <span style='font-size:8pt'>GB</span>"
+        return (
+            f"{size / (1024 * 1024 * 1024):.2f} <span style='font-size:8pt'>GB</span>"
+        )
+
 
 def format_project_urls(urls):
     """Formats a list of project URLs into clickable <a> tags."""
@@ -61,13 +61,14 @@ def format_project_urls(urls):
     links = []
     for url_str in urls:
         # Handles formats like "Homepage, https://..."
-        parts = [part.strip() for part in url_str.split(',', 1)]
+        parts = [part.strip() for part in url_str.split(",", 1)]
         if len(parts) == 2:
             name, url = parts
             links.append(f'<a href="{url}" style="color: #8ab4f8;">{name}</a>')
-        else: # Fallback for plain URLs
+        else:  # Fallback for plain URLs
             links.append(f'<a href="{url_str}" style="color: #8ab4f8;">{url_str}</a>')
     return "<br>".join(links)
+
 
 def format_tooltip_html(item, font_family_name):
     """
@@ -76,41 +77,69 @@ def format_tooltip_html(item, font_family_name):
     table_rows = []
 
     # --- Core Info ---
-    if item.get('name'):
-        table_rows.append(f'<tr><td class="tooltip-label">Name</td><td class="tooltip-value">{item["name"]}</td></tr>')
-    if item.get('version'):
-        table_rows.append(f'<tr><td class="tooltip-label">Version</td><td class="tooltip-value">{item["version"]}</td></tr>')
-    if item.get('summary'):
-        table_rows.append(f'<tr><td class="tooltip-label">Summary</td><td class="tooltip-value">{item["summary"].strip()}</td></tr>')
-    if item.get('author'):
-        table_rows.append(f'<tr><td class="tooltip-label">Author</td><td class="tooltip-value">{item["author"]}</td></tr>')
+    if item.get("name"):
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Name</td><td class="tooltip-value">{item["name"]}</td></tr>'
+        )
+    if item.get("version"):
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Version</td><td class="tooltip-value">{item["version"]}</td></tr>'
+        )
+    if item.get("summary"):
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Summary</td><td class="tooltip-value">{item["summary"].strip()}</td></tr>'
+        )
+    if item.get("author"):
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Author</td><td class="tooltip-value">{item["author"]}</td></tr>'
+        )
 
     # --- Requirements ---
-    if item.get('requires_python'):
-        table_rows.append(f'<tr><td class="tooltip-label">Requires Python</td><td class="tooltip-value">{item["requires_python"]}</td></tr>')
-    if item.get('requires_dist'):
-        deps_html = "<br>".join(item['requires_dist'])
-        table_rows.append(f'<tr><td class="tooltip-label">Dependencies</td><td class="tooltip-value">{deps_html}</td></tr>')
+    if item.get("requires_python"):
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Requires Python</td><td class="tooltip-value">{item["requires_python"]}</td></tr>'
+        )
+    if item.get("requires_dist"):
+        deps_html = "<br>".join(item["requires_dist"])
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Dependencies</td><td class="tooltip-value">{deps_html}</td></tr>'
+        )
 
     # --- License Info (Always shows License field) ---
-    license_val = item.get('license') if item.get('license') else "<span class='tooltip-placeholder'>Not Provided</span>"
-    table_rows.append(f'<tr><td class="tooltip-label">License</td><td class="tooltip-value">{license_val}</td></tr>')
-    if item.get('license_expression'):
-        table_rows.append(f'<tr><td class="tooltip-label">License Expression</td><td class="tooltip-value">{item["license_expression"]}</td></tr>')
-    if item.get('license_file'):
-        files_html = "<br>".join(item['license_file'])
-        table_rows.append(f'<tr><td class="tooltip-label">License Files</td><td class="tooltip-value">{files_html}</td></tr>')
+    license_val = (
+        item.get("license")
+        if item.get("license")
+        else "<span class='tooltip-placeholder'>Not Provided</span>"
+    )
+    table_rows.append(
+        f'<tr><td class="tooltip-label">License</td><td class="tooltip-value">{license_val}</td></tr>'
+    )
+    if item.get("license_expression"):
+        table_rows.append(
+            f'<tr><td class="tooltip-label">License Expression</td><td class="tooltip-value">{item["license_expression"]}</td></tr>'
+        )
+    if item.get("license_file"):
+        files_html = "<br>".join(item["license_file"])
+        table_rows.append(
+            f'<tr><td class="tooltip-label">License Files</td><td class="tooltip-value">{files_html}</td></tr>'
+        )
 
     # --- Links & Details ---
-    if item.get('project_url'):
-        urls_html = format_project_urls(item['project_url'])
-        table_rows.append(f'<tr><td class="tooltip-label">Project URLs</td><td class="tooltip-value">{urls_html}</td></tr>')
-    if item.get('provides_extra'):
-        provides_html = "<br>".join(item['provides_extra'])
-        table_rows.append(f'<tr><td class="tooltip-label">Provides</td><td class="tooltip-value">{provides_html}</td></tr>')
-    if item.get('classifier'):
-        classifiers_html = "<br>".join(item['classifier'])
-        table_rows.append(f'<tr><td class="tooltip-label">Classifiers</td><td class="tooltip-value">{classifiers_html}</td></tr>')
+    if item.get("project_url"):
+        urls_html = format_project_urls(item["project_url"])
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Project URLs</td><td class="tooltip-value">{urls_html}</td></tr>'
+        )
+    if item.get("provides_extra"):
+        provides_html = "<br>".join(item["provides_extra"])
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Provides</td><td class="tooltip-value">{provides_html}</td></tr>'
+        )
+    if item.get("classifier"):
+        classifiers_html = "<br>".join(item["classifier"])
+        table_rows.append(
+            f'<tr><td class="tooltip-label">Classifiers</td><td class="tooltip-value">{classifiers_html}</td></tr>'
+        )
 
     all_rows_html = "\n".join(table_rows)
 
