@@ -17,16 +17,18 @@ paths:
       close: "assets/icons/close.svg"
       minimize: "assets/icons/minimize.svg"
       maximize: "assets/icons/maximize.svg"
+      settings: "assets/icons/settings.png"
+      reset: "assets/icons/reset.png"
   executables:
     load_library:
-      darwin: "./bin/darwin_arm64/library-loader"
-      win: "./bin/library-loader.exe" # change this to the correct path
+      darwin: "./bin/darwin/library-loader"
+      win32: "./bin/win32/library-loader.exe" # change this to the correct path
     pypiDetailFetcher:
-      darwin: "./bin/darwin_arm64/pypi-fetcher"
-      win: "./bin/pypi-fetcher.exe" # change this to the correct path
+      darwin: "./bin/darwin/pypi-fetcher"
+      win32: "./bin/win32/pypi-fetcher.exe" # change this to the correct path
     find_local_environment:
-      darwin: "./bin/darwin_arm64/env-finder"
-      win: "./bin/env-finder.exe" # change this to the correct path
+      darwin: "./bin/darwin/env-finder"
+      win32: "./bin/win32/env-finder.exe" # change this to the correct path
 
   search:
     darwin:

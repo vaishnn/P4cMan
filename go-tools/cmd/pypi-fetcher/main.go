@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -119,7 +120,13 @@ func create_find_app_support_dir(app_name string) (string, error) {
 	if err != nil {
 		slog.Error("Failed to get user home directory: ", "error", err)
 	}
+	platform := runtime.GOOS
 	app_support_dir := filepath.Join(home_dir, "Library", "Application Support", app_name)
+	if platform == "windows" {
+		app_support_dir = filepath.Join(home_dir, "AppData", "Local", app_name)
+	} else {
+		app_support_dir = filepath.Join(home_dir, ".config", app_name)
+	}
 
 	if _, err := os.Stat(app_support_dir); os.IsNotExist(err) {
 		err = os.MkdirAll(app_support_dir, 0755)

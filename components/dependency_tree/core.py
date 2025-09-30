@@ -15,9 +15,10 @@ os.environ["QT_LOGGING_RULES"] = "qt.qpa.cocoa.*.warning=false"
 class DependencyTree(QWidget):
     """Create the Dependecny Graph"""
 
-    def __init__(self, parent=None):
+    def __init__(self, config, parent=None):
         super().__init__(parent)
         self._parent = parent
+        self.config = config
         self.setObjectName("dependencyTree")
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -53,7 +54,7 @@ class DependencyTree(QWidget):
 
         self.spacer_item = QWidget()
         self.spacer_item.setObjectName("GraphWidget")
-        self.graph_widget = GraphWidget()
+        self.graph_widget = GraphWidget(self, self.config)
         self.graph_widget.setMaximumHeight(0)
         self.graph_widget.setVisible(False)
         self.spacer_item.setMinimumHeight(self.geometry().height() // 2)

@@ -23,22 +23,22 @@ for cmd in "${COMMANDS[@]}"; do
     if [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
         # Build for macOS Apple Silicon (M1/M2/M3/M4)
         echo "  -> Detected Apple Silicon Mac. Building for darwin/arm64..."
-        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/darwin_arm64/$cmd" "./cmd/$cmd"
+        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/darwin/$cmd" "./cmd/$cmd"
 
     elif [[ "$OS" == "Darwin" && "$ARCH" == "x86_64" ]]; then
         # Build for macOS Intel
         echo "  -> Detected Intel Mac. Building for darwin/amd64..."
-        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/darwin_amd64/$cmd" "./cmd/$cmd"
+        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/darwin/$cmd" "./cmd/$cmd"
 
     elif [[ "$OS" == "Linux" ]]; then
         # Build for Linux
         echo "  -> Detected Linux. Building for linux/amd64..."
-        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/linux_amd64/$cmd" "./cmd/$cmd"
+        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/linux/$cmd" "./cmd/$cmd"
 
     elif [[ "$OS" == "MINGW"* || "$OS" == "CYGWIN"* ]]; then
         # Build for Windows
         echo "  -> Detected Windows. Building for windows/amd64..."
-        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/windows_amd64/$cmd.exe" "./cmd/$cmd"
+        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/windows/$cmd.exe" "./cmd/$cmd"
 
     else
         echo "❌ Error: Unsupported operating system '$OS'."

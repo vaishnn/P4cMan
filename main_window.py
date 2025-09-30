@@ -79,8 +79,8 @@ class P4cMan(QMainWindow):
         # If onboarding was completed in previous runs, no need to hog memory by having onboarding
         if self.state_variables.get("project_folder", "") == "":
             self.onboarding_widget = OnboardingPage(self.config, self)
-            self.main_stack.setCurrentWidget(self.onboarding_widget)
             self.main_stack.addWidget(self.onboarding_widget)
+            self.main_stack.setCurrentWidget(self.onboarding_widget)
             self.main_stack.addWidget(self.container)
 
         else:
@@ -173,7 +173,7 @@ class P4cMan(QMainWindow):
         """
         self.libraries = Library(config=self.config)
         self.installer = Installer(config=self.config)
-        self.dependency_tree = DependencyTree()
+        self.dependency_tree = DependencyTree(config=self.config)
         self.analysis = Analysis()
         self.settings = Setting()
         self.about = About()

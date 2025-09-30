@@ -332,6 +332,11 @@ stylesheet:
     QScrollBar::sub-page {
         background: none;
     }
+    #graph_setting_button, #graph_reset_layout_button {
+        background: transparent;
+        border-radius: {{ ui.dimensions.borderRadius.medium }};
+        padding: {{ ui.dimensions.padding.small }};
+    }
 
   initScreen: |
     #container {

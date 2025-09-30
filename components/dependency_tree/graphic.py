@@ -1,8 +1,11 @@
+from networkx.classes.digraph import DiGraph
 import pymunk
 import os
 import networkx as nx
 
+from components.dependency_tree.controls import ControlPanel
 from components.dependency_tree.threads import GNetworkLoader
+from helpers.utils import resource_path
 from .physics import (
     DAMPING,
     ELASTICITY,
@@ -23,10 +26,13 @@ from PyQt6.QtWidgets import (
     QGraphicsScene,
     QGraphicsTextItem,
     QGraphicsView,
+    QGroupBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from networkx.classes import DiGraph
-from PyQt6.QtCore import QPointF, QRectF, QTimer, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtCore import QPointF, QRectF, QSize, QTimer, Qt
+from PyQt6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen
 
 
 class NodeItem(QGraphicsEllipseItem):
@@ -34,6 +40,8 @@ class NodeItem(QGraphicsEllipseItem):
 
     def __init__(self, text, radius, node_data=None):
         super().__init__(0, 0, radius * 2, radius * 2)
+
+        self.setAcceptHoverEvents(True)
 
         self.label = QGraphicsTextItem(os.path.basename(text))
         font = QFont()
@@ -45,11 +53,37 @@ class NodeItem(QGraphicsEllipseItem):
             -radius - 50,
         )
 
+        self.tooltip_timer = QTimer()
+        self.tooltip_timer.setSingleShot(True)
+        self.tooltip_timer.setInterval(500)
+        self.tooltip_timer.timeout.connect(self._show_tooltip)
+
+        # self.tooltip = SomeToolTipClass
+
     def set_font_size(self, size):
         font = self.label.font()
         font.setPointSize(size)
         self.label.setFont(font)
         self.update()
+
+    def _show_tooltip(self):
+        pass
+
+    def hoverEnterEvent(self, event):
+        """Display some sort of tooltip"""
+        print("Entered Hover")
+        self.tooltip_timer.start()
+        return super().hoverEnterEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        print(10)
+        return super().mouseMoveEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        """if mouse leaves the object stop the timer"""
+        print("Leaves Hover")
+        self.tooltip_timer.stop()
+        return super().hoverLeaveEvent(event)
 
 
 class NodeConnection(QGraphicsLineItem):
@@ -61,10 +95,16 @@ class NodeConnection(QGraphicsLineItem):
 class GraphWidget(QGraphicsView):
     """The main widget making the graph"""
 
-    def __init__(self):
+    def __init__(self, parent, config):
         super().__init__()
         self._scene = QGraphicsScene(self)
+        self._parent = parent
         self.setScene(self._scene)
+
+        self.config = config
+        # self.view = QGraphicsView(self._scene, self)
+        # self.view.scale(0.6, 0.6)
+        self.scale(0.1, 0.1)
 
         # Enabling zoom and pan
         self.drag_object_or_screen = {"screen": True, "objects": False}
@@ -80,6 +120,7 @@ class GraphWidget(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self._parameters()
+        self._setup_control_bar()
 
     def _parameters(self):
         """for initilizating all the parameters"""
@@ -126,8 +167,89 @@ class GraphWidget(QGraphicsView):
         # Object for creating graph
         self.graph_loader = None
 
+        # heighlighted nodes when someone hovers
+        self.body_under_mouse = None
+        self.heighlighed_nodes = set()
+        self.heighlighed_edges = set()
+
+        # custom attributes set by user
+        self.hidden_nodes = {}
+        self.color_of_nodes = {}
+
+        # timers for color changes
+        self.color_change_timer = QTimer()
+        self.color_change_timer.setSingleShot(True)
+        self.color_change_timer.setInterval(100)
+        self.color_change_timer.timeout.connect(self._color_nodes)
+
+        self.color_to_normal_timer = QTimer()
+        self.color_to_normal_timer.setSingleShot(True)
+        self.color_to_normal_timer.setInterval(200)
+        self.color_to_normal_timer.timeout.connect(self._clear_color)
+
     def _reset_layout(self):
         pass
+
+    def resizeEvent(self, event):
+        if hasattr(self, "control_widget"):
+            self.control_widget.setGeometry(
+                self.frameGeometry().width() - 50, 10, 40, 90
+            )
+
+        return super().resizeEvent(event)
+
+    def _setup_control_bar(self):
+        # Controls for graph
+        self.control_widget = QWidget(self)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Setting for opening setting panel
+        pane_box = QGroupBox()
+        pane_box.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(pane_box)
+        self.control_widget.setLayout(layout)
+        self.control_widget.setGeometry(self.frameGeometry().width() - 50, 10, 40, 90)
+
+        self.setting_button = QPushButton()
+        self.setting_button.setIcon(
+            QIcon(
+                resource_path(
+                    self.config.get("paths", {})
+                    .get("assets", {})
+                    .get("images", {})
+                    .get("settings", "")
+                )
+            )
+        )
+        sub_layout = QVBoxLayout()
+
+        # reset layout for resetting positions and position of current view
+        self.reset_layout_button = QPushButton()
+        self.reset_layout_button.setIcon(
+            QIcon(
+                resource_path(
+                    self.config.get("paths", {})
+                    .get("assets", {})
+                    .get("images", {})
+                    .get("reset", "")
+                )
+            )
+        )
+        self.setting_button.setIconSize(QSize(24, 24))
+        self.reset_layout_button.setIconSize(QSize(24, 24))
+
+        sub_layout.addWidget(self.setting_button)
+        sub_layout.addWidget(self.reset_layout_button)
+        sub_layout.setContentsMargins(0, 0, 0, 0)
+        sub_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pane_box.setLayout(sub_layout)
+
+        self.setting_button.setObjectName("graph_setting_button")
+        self.reset_layout_button.setObjectName("graph_reset_layout_button")
+        # self.controls = ControlPanel(parent=self)
+        # self.controls.reset_signal.connect(self)
 
     def _changing_layout(self, layout_name):
         pass
@@ -189,6 +311,8 @@ class GraphWidget(QGraphicsView):
         self.bodies.clear()
         self.edges.clear()
 
+        self.heighlighed_nodes.clear()
+
         # Remove all the shapes
         for shape in list(self.space.shapes):
             self.space.remove(shape)
@@ -208,6 +332,9 @@ class GraphWidget(QGraphicsView):
         self._generate_shell_layout()
         self._create_bodies_and_nodes()
         self.timer.start(int(TIMESTEP * 100))
+
+    def _reset_graph_layout(self):
+        pass
 
     def _generate_shell_layout(self):
         """Generate a concentric shell layout"""
@@ -288,10 +415,16 @@ class GraphWidget(QGraphicsView):
         self._create_bodies_and_nodes()
         self.timer.start(int(TIMESTEP * 100))
 
+    def _glow_up_nodes(self):
+        pass
+
+    def _hide_nodes(self):
+        pass
+
     def mouseMoveEvent(self, event) -> None:
         """Capture mouse position and convert it into pymunk vector and give the property of our mouse_body object"""
 
-        if event is None:
+        if event is None or self.graph is None:
             return
         pos = self.mapToScene(event.pos())
         point = pymunk.Vec2d(pos.x(), pos.y())
@@ -299,16 +432,74 @@ class GraphWidget(QGraphicsView):
         shape_info = self.space.point_query_nearest(point, 0, pymunk.ShapeFilter())
 
         if shape_info:
+            # for converting pan to moving object
             if self.drag_object_or_screen["objects"] is False:
                 self.setDragMode(QGraphicsView.DragMode.NoDrag)
                 self.drag_object_or_screen = {"screen": False, "objects": True}
+
+            # Heighlight that node and other
+            if self.body_under_mouse is None:
+                self.body_under_mouse = [shape_info.shape.body, "hover"]
+                self.color_change_timer.start()
+
+            elif self.body_under_mouse[1] != "dragged":
+                self.body_under_mouse = [shape_info.shape.body, "hover"]
+                self.color_change_timer.start()
 
         else:
             if self.drag_object_or_screen["screen"] is False:
                 self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
                 self.drag_object_or_screen = {"screen": True, "objects": False}
 
+            if self.body_under_mouse:
+                if self.body_under_mouse[1] != "dragged":
+                    self.color_to_normal_timer.start()
+                    self.body_under_mouse = None
+
         return super().mouseMoveEvent(event)
+
+    def _color_nodes(self):
+        if self.graph is None or self.body_under_mouse is None:
+            return
+
+        idx_of_body = {j: i for i, j in self.bodies.items()}[self.body_under_mouse[0]]
+        connected_nodes = self.graph.neighbors(idx_of_body)
+
+        # Change the color to a little brighter for node and the connected neighbors
+        ellipse = self.nodes[idx_of_body]
+        ellipse: QGraphicsEllipseItem
+        ellipse.setBrush(QBrush(Qt.GlobalColor.red))
+        self.heighlighed_nodes.add(idx_of_body)
+        for connected_node in connected_nodes:
+            connected_edge = self.edges[(idx_of_body, connected_node)]
+            connected_edge: QGraphicsLineItem
+            connected_edge.setPen(QPen(Qt.GlobalColor.red, LINEWIDTH + 2))
+            self.nodes[connected_node].setBrush(QBrush(Qt.GlobalColor.red))
+            self.heighlighed_nodes.add(connected_node)
+            self.heighlighed_edges.add(connected_edge)
+
+        for node, ellipse in self.nodes.items():
+            if node not in self.heighlighed_nodes:
+                ellipse.setOpacity(0.1)
+        for nodes, line in self.edges.items():
+            if line not in self.heighlighed_edges:
+                line.setOpacity(0.1)
+
+    def _clear_color(self):
+        if self.heighlighed_nodes:
+            for heighlighted_node in self.nodes:
+                ellipse = self.nodes[heighlighted_node]
+                ellipse.setOpacity(1.0)
+                ellipse: QGraphicsEllipseItem
+                ellipse.setBrush(QBrush(QColor("#bfbfbf")))
+            self.heighlighed_nodes.clear()
+
+        if self.edges:
+            for heighlighted_edge in self.edges.values():
+                heighlighted_edge.setOpacity(1.0)
+                heighlighted_edge.setPen(QPen(QColor("#42484c"), LINEWIDTH))
+
+            self.heighlighed_edges.clear()
 
     def mousePressEvent(self, event) -> None:
         """Move the object if the tapped place has any nodes"""
@@ -328,6 +519,7 @@ class GraphWidget(QGraphicsView):
 
             if shape_info is not None:
                 dragged_body = shape_info.shape.body
+                self.body_under_mouse = [dragged_body, "dragged"]
                 dragged_node_id = shape_info.shape.node_id
 
                 self._moving_object = (dragged_body, dragged_node_id)
@@ -370,6 +562,9 @@ class GraphWidget(QGraphicsView):
             self._clear_modified_bodies()
 
         self._moving_object = None
+        if self.body_under_mouse:
+            self.body_under_mouse = None
+
         return super().mouseReleaseEvent(event)
 
     def _clear_modified_bodies(self):
