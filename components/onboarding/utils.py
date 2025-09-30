@@ -18,14 +18,7 @@ def locations_of_python_list():
         pass
 
 
-def where_python_location(
-    searching_paths: list[str] = [
-        "/Library/Frameworks/Python.framework/Versions",
-        "/opt/homebrew/bin",
-        "/usr/local/bin",
-        "/usr/bin",
-    ],
-) -> dict[str, str]:
+def where_python_location() -> dict[str, str]:
     """
     This function searches for python interpreters in the given paths.
     """
@@ -40,8 +33,8 @@ def where_python_location(
         )
         paths = result.stdout.strip().split("\n")
         for path in paths:
-            version = subprocess.check_output(
-                [path, "--version"], capture_output=True, text=True, check=True
+            version = subprocess.run(
+                [path, "--version"], capture_output=True, text=True
             )
             found_interpreters[path] = version.stdout.strip()
 
@@ -69,7 +62,7 @@ def where_python_location(
                 "/opt/bin",
             ]
             search_paths
-        for folder in searching_paths:
+        for folder in search_paths:
             if not Path(folder).is_dir() and os.access(folder, os.X_OK):
                 continue
 
@@ -88,13 +81,15 @@ def where_python_location(
                                     abs_path = just_path.resolve()
 
                                     if abs_path not in found_interpreters:
-                                        version = subprocess.check_output(
+                                        version = subprocess.run(
                                             [str(abs_path), "--version"],
-                                            stderr=subprocess.STDOUT,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
                                         )
-                                        found_interpreters[str(abs_path)] = (
-                                            version.decode().strip()
-                                        )
+                                        if version.returncode == 0:
+                                            found_interpreters[str(abs_path)] = (
+                                                version.stdout.strip()
+                                            )
                                         break
                                 except Exception:
                                     continue  # This is for python named but doesn't have version and any other errors
@@ -106,13 +101,15 @@ def where_python_location(
                         try:
                             abs_path = just_path.resolve()
                             if str(abs_path) not in found_interpreters:
-                                version = subprocess.check_output(
+                                version = subprocess.run(
                                     [str(abs_path), "--version"],
-                                    stderr=subprocess.STDOUT,
+                                    text=True,
+                                    capture_output=True,
                                 )
-                                found_interpreters[str(abs_path)] = (
-                                    version.decode().strip()
-                                )
+                                if version.returncode == 0:
+                                    found_interpreters[str(abs_path)] = (
+                                        version.stdout.strip()
+                                    )
                         except Exception:
                             continue
 
