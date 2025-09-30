@@ -38,7 +38,7 @@ for cmd in "${COMMANDS[@]}"; do
     elif [[ "$OS" == "MINGW"* || "$OS" == "CYGWIN"* ]]; then
         # Build for Windows
         echo "  -> Detected Windows. Building for windows/amd64..."
-        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/windows/$cmd.exe" "./cmd/$cmd"
+        go build -C "$GO_PROJECT_PATH" -o "../$OUTPUT_BIN_PATH/win32/$cmd.exe" "./cmd/$cmd"
 
     else
         echo "❌ Error: Unsupported operating system '$OS'."

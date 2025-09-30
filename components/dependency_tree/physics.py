@@ -4,7 +4,7 @@ NODE_RADIUS = 50
 PADDING = 50
 REST_LENGTH = 100
 STIFFNESS = 0.8
-DAMPING = 0.2
+DAMPING = 0.8
 SPRING_CONSTANT = 10000
 SPACE_DAMPING = 0.1
 ATTRACTION_FORCE = 500
@@ -26,13 +26,13 @@ LINEWIDTH = 3
 def dragged_body_velocity_func(body, gravity, damping, dt):
     """Applying near to infinite damping"""
     pymunk.Body.update_velocity(body, gravity, damping, dt)
-    body.velocity *= 0.0005
+    body.velocity *= 0.01
 
 
 def neighbour_body_velocity_func(body, gravity, damping, dt):
     """Applying some amount of damping"""
     pymunk.Body.update_velocity(body, gravity, damping, dt)
-    body.velocity *= 0.050
+    body.velocity *= 0.80
 
 
 def repulsion_handler(arbiter, space, data):

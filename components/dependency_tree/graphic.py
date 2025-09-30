@@ -563,6 +563,7 @@ class GraphWidget(QGraphicsView):
 
         self._moving_object = None
         if self.body_under_mouse:
+            self.color_to_normal_timer.start()
             self.body_under_mouse = None
 
         return super().mouseReleaseEvent(event)

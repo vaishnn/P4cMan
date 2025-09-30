@@ -135,7 +135,6 @@ class LibraryWorker(QObject):
             [python_path, "-m", "venv", virtual_env_name],
             capture_output=True,
             text=True,
-            check=False,
             cwd=directory,
         )
         result_venvs = subprocess.run(

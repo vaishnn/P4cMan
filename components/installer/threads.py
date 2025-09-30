@@ -77,7 +77,6 @@ class InstallerLibraries(QThread):
                 [self.python_exec_path, "-m", "pip", "install", self.library_name],
                 capture_output=True,
                 text=True,
-                check=False,  # Don't raise an exception on non-zero exit codes
             )
 
             if result.stderr:
