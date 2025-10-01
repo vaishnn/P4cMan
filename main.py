@@ -10,11 +10,6 @@ from helpers.state_manager import load_state
 from config.loader import load_config, load_font
 from PyQt6.QtWidgets import QApplication, QSplashScreen
 
-# setting up logger once
-setup_logging()
-logger = logging.getLogger(__name__)
-
-os.environ["QT_LOGGING_RULES"] = "qt.qpa.cocoa.*.warning=false"
 
 UI_FILE_PATH = resource_path("config/ui.yaml")
 CONTROLS_FILE_PATH = resource_path("config/paths.yaml")
@@ -23,12 +18,51 @@ APPLICATION_PATH = resource_path("config/controls.yaml")
 STYLE_SHEET_PATH = resource_path("config/style.yaml")
 
 
-if __name__ == "__main__":
+def setup_application(app: QApplication, config: dict) -> None:
+    """Configures and returns the application instance"""
+
+    # Set application specifics like name, version and icon
+    app.setApplicationDisplayName(config.get("application", {}).get("name", ""))
+    app.setWindowIcon(
+        QIcon(
+            resource_path(
+                config.get("paths", {})
+                .get("assets", {})
+                .get("images", {})
+                .get("appLogo", "")
+            )
+        )
+    )
+    app.setApplicationVersion(config.get("application", {}).get("version", ""))
+
+    # set font and style sheet to the application
+    font_path = resource_path(
+        config.get("paths", {}).get("assets", {}).get("fonts", {}).get("main", "")
+    )
+    if font_path:
+        font_size = (
+            config.get("ui", {})
+            .get("dimensions", {})
+            .get("fontSize", {})
+            .get("mainFont", 14)
+        )
+        app.setFont(load_font(font_path, font_size))
+
+    app.setStyleSheet(config.get("stylesheet", {}).get("main", ""))
+
+
+def main():
+    """Entry Point to the P4cMan Application"""
+
+    # when we run .app or .exe current directory can change, this fixes by checking frozen attribute in sys package
+    # Thing changes from which ever directory the app may be launched from
     if getattr(sys, "frozen", False):
         application_path = os.path.dirname(sys.executable)
         os.chdir(application_path)
+
     app = QApplication(sys.argv)
 
+    # Splash screen
     pixmap = QPixmap(resource_path("assets/icons/appLogo.png"))
     pixmap = pixmap.scaled(
         400,
@@ -45,6 +79,7 @@ if __name__ == "__main__":
     splash.show()
     app.processEvents()
 
+    # load config and state
     state = load_state()
     config: dict = load_config(
         UI_FILE_PATH,
@@ -54,35 +89,18 @@ if __name__ == "__main__":
         STYLE_SHEET_PATH,
     )
 
-    app.setApplicationDisplayName(config.get("application", {}).get("name", ""))
-    app.setWindowIcon(
-        QIcon(
-            resource_path(
-                config.get("paths", {})
-                .get("assets", {})
-                .get("images", {})
-                .get("appLogo", "")
-            )
-        )
-    )
-    app.applicationVersion = config.get("app", {}).get("version", "")
-
-    font_path = resource_path(
-        config.get("paths", {}).get("assets", {}).get("fonts", {}).get("main", "")
-    )
-    if font_path:
-        font_size = (
-            config.get("ui", {})
-            .get("dimensions", {})
-            .get("fontSize", {})
-            .get("mainFont", 14)
-        )
-        app.setFont(load_font(font_path, font_size))
-
-    app.setStyleSheet(config.get("stylesheet", {}).get("main", ""))
+    # setup application specifics and run app
+    setup_application(app, config)
 
     window = P4cMan(state, config)
     window.show()
     splash.finish(window)
 
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    setup_logging()
+    logger = logging.getLogger(__name__)
+    os.environ["QT_LOGGING_RULES"] = "qt.qpa.cocoa.*.warning=false"
+    main()

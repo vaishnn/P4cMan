@@ -1,10 +1,10 @@
 from networkx.classes.digraph import DiGraph
+import logging
 import pymunk
 import os
 import networkx as nx
-
-from components.dependency_tree.controls import ControlPanel
 from components.dependency_tree.threads import GNetworkLoader
+from components.widgets.animate import animate_object
 from helpers.utils import resource_path
 from .physics import (
     DAMPING,
@@ -34,24 +34,40 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QPointF, QRectF, QSize, QTimer, Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen
 
+logger = logging.getLogger(__name__)
+
 
 class NodeItem(QGraphicsEllipseItem):
-    """Custom ellipse Item for nodes of our dependency graph"""
+    """
+    Custom ellipse Item for nodes of our dependency graph
+    radius: float
+    node_data: dict
 
-    def __init__(self, text, radius, node_data=None):
+    """
+
+    def __init__(self, radius: float, node_data: dict):
         super().__init__(0, 0, radius * 2, radius * 2)
 
         self.setAcceptHoverEvents(True)
+        self.node_data = node_data
 
-        self.label = QGraphicsTextItem(os.path.basename(text))
+        # set label data
+        self.label = QGraphicsTextItem()
+        self._set_label_data()
         font = QFont()
         font.setPointSize(80)
         self.label.setFont(font)
         self.label.setParentItem(self)
         self.label.setPos(
             -self.label.boundingRect().width() / 2 + radius,
-            -radius - 50,
+            -radius - 80,
         )
+
+        self.radius = radius
+
+        # animation supported variables
+        self.animating_up = False
+        self.animating_down = False
 
         self.tooltip_timer = QTimer()
         self.tooltip_timer.setSingleShot(True)
@@ -60,7 +76,23 @@ class NodeItem(QGraphicsEllipseItem):
 
         # self.tooltip = SomeToolTipClass
 
+    def _set_label_data(self):
+        """This sets the label data if both the required fields are present"""
+
+        if self.node_data and isinstance(self.node_data, dict):
+            if "file_path" in self.node_data and "project_folder" in self.node_data:
+                self.label.setPlainText(
+                    os.path.relpath(
+                        self.node_data["file_path"], self.node_data["project_folder"]
+                    )
+                )
+                return
+
+        # if any of the things are not satisfied
+        logger.warning("Label data not set")
+
     def set_font_size(self, size):
+        """This is for increasing font when someone hover's over a label"""
         font = self.label.font()
         font.setPointSize(size)
         self.label.setFont(font)
@@ -71,17 +103,43 @@ class NodeItem(QGraphicsEllipseItem):
 
     def hoverEnterEvent(self, event):
         """Display some sort of tooltip"""
-        print("Entered Hover")
         self.tooltip_timer.start()
+
+        if not self.animating_up:
+            animate_object(
+                self=self,
+                object_to_be_animated=self.label,
+                property_to_be_animated=b"pos",
+                final_dimension=QPointF(
+                    self.label.pos().x(),
+                    self.label.pos().y() + 50,
+                ),
+                initial_dimension=self.label.pos(),
+                visibility=True,
+                name="label_pos_down",
+                duration=50,
+            )
+
         return super().hoverEnterEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
-        print(10)
         return super().mouseMoveEvent(event)
 
     def hoverLeaveEvent(self, event):
+        animate_object(
+            self=self,
+            object_to_be_animated=self.label,
+            property_to_be_animated=b"pos",
+            final_dimension=QPointF(
+                self.label.pos().x(),
+                self.label.pos().y() - 50,
+            ),
+            initial_dimension=self.label.pos(),
+            visibility=True,
+            name="label_pos_up",
+            duration=50,
+        )
         """if mouse leaves the object stop the timer"""
-        print("Leaves Hover")
         self.tooltip_timer.stop()
         return super().hoverLeaveEvent(event)
 
@@ -128,6 +186,8 @@ class GraphWidget(QGraphicsView):
         # Initializing Graph and Position to None
         self.graph = None
         self.graph_nodes_position = None
+        self.main_file = None
+        self.project_folder = None
 
         # physics pymunk basic setup, can be more complex
         self.space = pymunk.Space()
@@ -248,6 +308,7 @@ class GraphWidget(QGraphicsView):
 
         self.setting_button.setObjectName("graph_setting_button")
         self.reset_layout_button.setObjectName("graph_reset_layout_button")
+        self.reset_layout_button.clicked.connect(self._reset_graph_layout)
         # self.controls = ControlPanel(parent=self)
         # self.controls.reset_signal.connect(self)
 
@@ -275,27 +336,9 @@ class GraphWidget(QGraphicsView):
             pos2 = self.bodies[v].position
             line.setLine(pos1.x, pos1.y, pos2.x, pos2.y)
 
-        # self._repulsion_strength()
-
-    # This will have a time complexity of O(N^2), so might need to find a better way to have repulsion
-    def _repulsion_strength(self):
-        for body_a in self.bodies.values():
-            for body_b in self.bodies.values():
-                if body_a == body_b:
-                    continue
-
-                direction_vector = body_a.position - body_b.position
-                r = direction_vector.length
-                if r < 1:
-                    r = 1
-
-                force_magnitute = 50000 / r**2
-                force_vector = direction_vector.normalized() * force_magnitute
-
-                body_a.apply_force_at_local_point(force_vector, (0, 0))
-                body_b.apply_force_at_local_point(-force_vector, (0, 0))
-
     def get_graph(self, file_path, project_folder):
+        self.main_file = file_path
+        self.project_folder = project_folder
         self.graph_loader = GNetworkLoader(file_path, project_folder)
         self.graph_loader.graph_data.connect(self._set_graph_data)
         self.graph_loader.start()
@@ -334,7 +377,15 @@ class GraphWidget(QGraphicsView):
         self.timer.start(int(TIMESTEP * 100))
 
     def _reset_graph_layout(self):
-        pass
+        """reset the graph layout"""
+
+        self._generate_shell_layout()
+
+        if self.graph_nodes_position is None:
+            return
+
+        for node, body in self.bodies.items():
+            body.position = tuple(self.graph_nodes_position[node])
 
     def _generate_shell_layout(self):
         """Generate a concentric shell layout"""
@@ -375,8 +426,10 @@ class GraphWidget(QGraphicsView):
             self.space.add(body, shape)
 
             self.original_velocities_functions[body] = body.velocity_func
-
-            ellipse = NodeItem(node_id, NODE_RADIUS)
+            ellipse = NodeItem(
+                NODE_RADIUS,
+                node_data={"file_path": node_id, "project_folder": self.project_folder},
+            )
             # ellipse = QGraphicsEllipseItem(0, 0, 2 * NODE_RADIUS, 2 * NODE_RADIUS)
             ellipse.setBrush(QBrush(QColor("#bfbfbf")))
             ellipse.setToolTip(node_id)

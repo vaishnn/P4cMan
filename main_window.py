@@ -42,19 +42,20 @@ class P4cMan(QMainWindow):
             config (dict, optional): A dictionary containing the application's configuration. Defaults to {}.
         """
         super().__init__()
-        self.python_interpreters = {}
         self.setMouseTracking(True)
         self.config = config
-        self._extra_content()
         self.python_thread_worker = None
+
+        # Main container which will contain everthing else
+        self.container = QFrame()
+        self.container.setObjectName("mainWindowContainer")
 
         # State variables
         self.state_variables = state_variables
 
+        self._extra_content()
         self._setting_ui_properties()
-        self.container = QFrame()
         self._saving_screen()
-        self.container.setObjectName("mainWindowContainer")
         self._setup_main_app_ui()
         self._onboarding_steps()
         self._set_connections()
@@ -65,6 +66,7 @@ class P4cMan(QMainWindow):
         Initializes extra content for the application.
         """
         self.current_libraries = []
+        self.python_interpreters = {}
         self._installer_populated = False
 
     def _onboarding_steps(self):

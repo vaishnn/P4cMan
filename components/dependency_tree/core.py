@@ -1,9 +1,11 @@
 import os
 import networkx as nx
 
+from components.widgets.animate import animate_object
+
 from .graphic import GraphWidget
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFileDialog, QLabel, QWidget, QVBoxLayout
 import logging
 
@@ -65,50 +67,6 @@ class DependencyTree(QWidget):
         # if the selected is clicked store the location selector button in class as object
         self.file_selector.mousePressEvent = self._on_file_selected  # type: ignore
 
-    def _animate(
-        self,
-        object_to_be_animated,
-        property_to_be_animated: bytes,
-        final_dimension: int,
-        initial_dimension: int,
-        visibility: bool,
-        name: str,
-        animation_type=QEasingCurve.Type.InQuad,
-        duration: int = 500,
-        before: bool = False,
-        continuous: bool = False,
-    ):
-        """
-        Creates and starts a QPropertyAnimation for a given object property.
-
-        Args:
-            object_to_be_animated: The Object to animate.
-            property_to_be_animated: The byte-string name of the property to animate (e.g., b'maximumHeight').
-            final_dimension: The final value of the animated property.
-            initial_dimension: The starting value of the animated property.
-            visibility: If True, the object is visible after the animation; otherwise, it's hidden.
-            name: An attribute name to store the QPropertyAnimation instance (e.g., "hide_search_bar").
-            animation_type: The easing curve to use for the animation.
-            duration: The duration of the animation in milliseconds.
-            before: To commit visibility before or after
-        """
-        if before:  # this is for when appearing
-            object_to_be_animated.setVisible(visibility)
-        animation = QPropertyAnimation(object_to_be_animated, property_to_be_animated)
-        setattr(self, name, animation)
-        animation.setDuration(duration)
-        animation.setStartValue(initial_dimension)
-        animation.setEndValue(final_dimension)
-        if continuous:
-            animation.setLoopCount(-1)
-        else:
-            animation.setLoopCount(1)
-        animation.setEasingCurve(animation_type)
-        animation.finished.connect(
-            lambda: (object_to_be_animated.setVisible(visibility), delattr(self, name))
-        )
-        animation.start()
-
     def _on_file_selected(self, event):
         # only let the user select python file, there can be one more way by project toml or something similar structure
         file_path, _ = QFileDialog.getOpenFileName(
@@ -119,7 +77,8 @@ class DependencyTree(QWidget):
             # path of project dir and file is not project directory display a toast message
             self.current_file = file_path
             self.file_selector.setText(file_path)
-            self._animate(
+            animate_object(
+                self,
                 object_to_be_animated=self.spacer_item,
                 property_to_be_animated=b"minimumHeight",
                 final_dimension=0,
@@ -138,7 +97,8 @@ class DependencyTree(QWidget):
         self.graph_widget.get_graph(self.current_file, self.project_folder)
 
         # Animating the graph layout
-        self._animate(
+        animate_object(
+            self,
             object_to_be_animated=self.graph_widget,
             property_to_be_animated=b"maximumHeight",
             final_dimension=4000,  # to move the limit past the possible size

@@ -24,6 +24,7 @@ from PyQt6.QtCore import (
     QSize,
     pyqtSlot,
 )
+from ..widgets.animate import animate_object
 from ..widgets.helper_classes import LineEdit
 from ..onboarding.utils import commit_action
 from ..onboarding.utils import loading_virtual_env
@@ -108,50 +109,6 @@ class Library(QWidget):
 
         page_layout.addLayout(library_section_layout)
 
-    def _animate(
-        self,
-        object_to_be_animated,
-        property_to_be_animated: bytes,
-        final_dimension: int,
-        initial_dimension: int,
-        visibility: bool,
-        name: str,
-        animation_type=QEasingCurve.Type.InQuad,
-        duration: int = 500,
-        before: bool = False,
-        continuous: bool = False,
-    ):
-        """
-        Creates and starts a QPropertyAnimation for a given object property.
-
-        Args:
-            object_to_be_animated: The Object to animate.
-            property_to_be_animated: The byte-string name of the property to animate (e.g., b'maximumHeight').
-            final_dimension: The final value of the animated property.
-            initial_dimension: The starting value of the animated property.
-            visibility: If True, the object is visible after the animation; otherwise, it's hidden.
-            name: An attribute name to store the QPropertyAnimation instance (e.g., "hide_search_bar").
-            animation_type: The easing curve to use for the animation.
-            duration: The duration of the animation in milliseconds.
-            before: To commit visibility before or after
-        """
-        if before:  # this is for when appearing
-            object_to_be_animated.setVisible(visibility)
-        animation = QPropertyAnimation(object_to_be_animated, property_to_be_animated)
-        setattr(self, name, animation)
-        animation.setDuration(duration)
-        animation.setStartValue(initial_dimension)
-        animation.setEndValue(final_dimension)
-        if continuous:
-            animation.setLoopCount(-1)
-        else:
-            animation.setLoopCount(1)
-        animation.setEasingCurve(animation_type)
-        animation.finished.connect(
-            lambda: (object_to_be_animated.setVisible(visibility), delattr(self, name))
-        )
-        animation.start()
-
     def _setup_path_selection_bar(self, parent_layout):
         """Creates the top bar for selecting the virtual environment path."""
         layout = QHBoxLayout()
@@ -206,10 +163,11 @@ class Library(QWidget):
     def _create_new_virtual_env(self):
         """Prepares the UI to allow the user to create a new virtual environment."""
         self.stacked_library_with_loading_screen.setCurrentWidget(self.create_new_env)
-        self._animate(
-            self.search_bar, b"maximumHeight", 0, 30, False, "hide_search_bar"
+        animate_object(
+            self, self.search_bar, b"maximumHeight", 0, 30, False, "hide_search_bar"
         )
-        self._animate(
+        animate_object(
+            self,
             self.change_env_in_same_directory,
             b"maximumWidth",
             0,
@@ -217,7 +175,8 @@ class Library(QWidget):
             False,
             "hide_env_box",
         )
-        self._animate(
+        animate_object(
+            self,
             self.initialize_env_button,
             b"maximumWidth",
             0,
@@ -433,7 +392,8 @@ class Library(QWidget):
 
     def _check_for_hidden(self):
         if not self.search_bar.isVisible():
-            self._animate(
+            animate_object(
+                self,
                 self.search_bar,
                 b"maximumHeight",
                 30,
@@ -443,7 +403,8 @@ class Library(QWidget):
                 before=True,
             )
         if not self.initialize_env_button.isVisible():
-            self._animate(
+            animate_object(
+                self,
                 self.initialize_env_button,
                 b"maximumWidth",
                 15,
@@ -453,7 +414,8 @@ class Library(QWidget):
                 before=True,
             )
         if not self.change_env_in_same_directory.isVisible():
-            self._animate(
+            animate_object(
+                self,
                 self.change_env_in_same_directory,
                 b"maximumWidth",
                 150,
@@ -526,10 +488,17 @@ class Library(QWidget):
                 self.stacked_library_with_loading_screen.setCurrentWidget(
                     self.page_no_env
                 )
-                self._animate(
-                    self.search_bar, b"maximumHeight", 0, 30, False, "hide_search_bar"
+                animate_object(
+                    self,
+                    self.search_bar,
+                    b"maximumHeight",
+                    0,
+                    30,
+                    False,
+                    "hide_search_bar",
                 )
-                self._animate(
+                animate_object(
+                    self,
                     self.change_env_in_same_directory,
                     b"maximumWidth",
                     0,
@@ -538,7 +507,8 @@ class Library(QWidget):
                     "hide_env_box",
                 )
                 if not self.initialize_env_button.isVisible():
-                    self._animate(
+                    animate_object(
+                        self,
                         self.initialize_env_button,
                         b"maximumWidth",
                         15,

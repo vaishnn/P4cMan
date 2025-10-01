@@ -18,7 +18,7 @@ class GettingInstallerLibraryDetails(QThread):
     using an external Go executable.
 
     It executes the Go program with the provided list of libraries, captures
-    its JSON output, and emits the parsed dictionary result via the
+    its JSON output, and emits theS parsed dictionary result via the
     `finished` signal.
     """
 
@@ -34,6 +34,8 @@ class GettingInstallerLibraryDetails(QThread):
             result = subprocess.run(
                 [self.go_executable, *self.list_of_libraries],
                 capture_output=True,
+                encoding="utf-8",
+                errors="ignore",  # Makes the process more robust
                 text=True,
             )
             if result.stderr:
